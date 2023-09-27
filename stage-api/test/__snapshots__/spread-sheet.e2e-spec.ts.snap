@@ -1,0 +1,43 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SpreadSheetController (e2e) /:sheet_id (GET) complicated case 1`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "5",
+    "value": "=a+b",
+  },
+  "d": {
+    "result": "6",
+    "value": "=b*a",
+  },
+  "e": {
+    "result": "11",
+    "value": "=c + d",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) /:sheet_id (GET) simple case 1`] = `
+{
+  "var1": {
+    "result": "2",
+    "value": "2",
+  },
+  "var2": {
+    "result": "3",
+    "value": "3",
+  },
+  "var3": {
+    "result": "5",
+    "value": "=var1+var2",
+  },
+}
+`;

@@ -1,5 +1,4 @@
-import { UserEntity } from './user.entity';
+import { CellLinkEntity } from './cell-link.entity';
+import { CellEntity } from './cell.entity';
 
-export * from './user.entity';
-
-export const ENTITIES = [UserEntity];
+export const ENTITIES = [CellEntity, CellLinkEntity];

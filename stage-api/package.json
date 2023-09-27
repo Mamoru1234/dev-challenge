@@ -17,7 +17,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "node -r dotenv/config node_modules/.bin/jest --config ./test/jest-e2e.json --runInBand",
+    "test:e2e:watch": "node -r dotenv/config node_modules/.bin/jest --config ./test/jest-e2e.json --watch",
+    "typeorm": "ts-node -r dotenv/config node_modules/.bin/typeorm -d ./src/database/data-source.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -27,6 +29,7 @@
     "dotenv": "^16.3.1",
     "envalid": "^7.3.1",
     "equation-parser": "^1.0.0",
+    "lodash": "^4.17.21",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
@@ -38,6 +41,7 @@
     "@nestjs/testing": "^10.0.0",
     "@types/express": "^4.17.17",
     "@types/jest": "^29.5.2",
+    "@types/lodash": "^4.14.199",
     "@types/node": "^20.3.1",
     "@types/supertest": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
