@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Not, Repository } from 'typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
 import {
   CellData,
@@ -16,15 +16,20 @@ import { evalEquation, findVariables } from './equation.utils';
 import { EquationVariablesService } from './equation-variables.service';
 import { EquationNode } from 'equation-parser';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
+import { EquationRecalculateService } from './equation-recalculation.service';
+
+export interface CalculateEquationOutput {
+  varIds: string[];
+  result: number;
+}
 
 @Injectable()
 export class SpreadSheetService {
   constructor(
     @InjectRepository(CellEntity)
     private readonly cellRepository: Repository<CellEntity>,
-    @InjectRepository(CellLinkEntity)
-    private readonly cellLinkRepository: Repository<CellLinkEntity>,
     private readonly cellEquationParser: CellEquationParser,
+    private dataSource: DataSource,
   ) {}
 
   async getSheet(sheetId: string): Promise<GetSheetOutput> {
@@ -46,52 +51,94 @@ export class SpreadSheetService {
     }, {} as GetSheetOutput);
   }
 
-  async createCell(input: CreateCellInput): Promise<CellData> {
+  postCell(input: CreateCellInput): Promise<CellData> {
     const { cellId, sheetId, value } = input;
-    const equation = this.cellEquationParser.parse(value);
-    const result = equation
-      ? await this.calculateResult(sheetId, equation)
-      : value;
-    const cell = await this.cellRepository.save({
-      sheetId,
-      cellId,
-      value,
-      result,
-      equation,
+    return this.dataSource.transaction(async (tx) => {
+      const cellRepository = tx.getRepository(CellEntity);
+      const cellLinkRepository = tx.getRepository(CellLinkEntity);
+      const existingCell = await cellRepository.findOne({
+        where: {
+          sheetId,
+          cellId,
+        },
+        select: ['id'],
+      });
+      const equation = this.cellEquationParser.parse(value);
+      const variablesService = new EquationVariablesService(cellRepository);
+      const calculationOutput = equation
+        ? await this.calculateEquation(sheetId, equation, variablesService)
+        : undefined;
+      const result = calculationOutput
+        ? calculationOutput.result.toString()
+        : value;
+      const cell = await cellRepository.save({
+        id: existingCell?.id,
+        sheetId,
+        cellId,
+        value,
+        result,
+        equation,
+      });
+      if (calculationOutput) {
+        if (calculationOutput.varIds.includes(cell.id)) {
+          throw new BadRequestException('Self reference is not allowed');
+        }
+        variablesService.setValue(cell.id, {
+          cellId,
+          value: +result,
+        });
+        await this.saveEquationLinks(
+          cellLinkRepository,
+          cell.id,
+          calculationOutput.varIds,
+        );
+      }
+      if (existingCell) {
+        const equationRecalculateService = new EquationRecalculateService(
+          cellLinkRepository,
+          cellRepository,
+          variablesService,
+        );
+        await equationRecalculateService.recalculate({
+          id: cell.id,
+        });
+      }
+      return {
+        result: value,
+        value,
+      };
     });
-    if (equation) {
-      await this.saveEquationLinks(sheetId, cell.id, equation);
-    }
-    return {
-      result: value,
-      value,
-    };
   }
 
-  private async calculateResult(
+  private async calculateEquation(
     sheetId: string,
     equation: EquationNode,
-  ): Promise<string> {
-    const variablesService = new EquationVariablesService(this.cellRepository);
+    variablesService: EquationVariablesService,
+  ): Promise<CalculateEquationOutput> {
     const variableNames = findVariables(equation);
     const varIds = await this.mapVarNamesToIds(sheetId, variableNames);
     const varValues = await variablesService.populateVariables(varIds);
-    return evalEquation(equation, varValues);
+    const result = evalEquation(equation, varValues);
+    return {
+      result,
+      varIds,
+    };
   }
 
   private async saveEquationLinks(
-    sheetId: string,
+    cellLinkRepository: Repository<CellLinkEntity>,
     id: string,
-    equation: EquationNode,
+    varIds: string[],
   ): Promise<void> {
-    const variableNames = findVariables(equation);
-    const varIds = await this.mapVarNamesToIds(sheetId, variableNames);
-    // TODO remove outdated links
+    await cellLinkRepository.delete({
+      fromCellId: Not(In(varIds)),
+      toCellId: id,
+    });
     const links: Partial<CellLinkEntity>[] = varIds.map((it) => ({
       fromCellId: it,
       toCellId: id,
     }));
-    await this.cellLinkRepository.save(links);
+    await cellLinkRepository.save(links);
   }
 
   private async mapVarNamesToIds(

@@ -89,7 +89,7 @@ export function traverseEquation<R>(
 export function evalEquation(
   equation: EquationNode,
   variables: Record<string, number>,
-) {
+): number {
   return traverseEquation(equation, (visit: VisitNode<number>) => {
     if (visit.type === 'constant' && visit.name === 'number') {
       return +visit.value;

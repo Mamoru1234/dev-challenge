@@ -1,6 +1,68 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`SpreadSheetController (e2e) /:sheet_id (GET) complicated case 1`] = `
+exports[`SpreadSheetController (e2e) comples update case 1`] = `
+{
+  "a": {
+    "result": "4",
+    "value": "4",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "7",
+    "value": "=a+b",
+  },
+  "d": {
+    "result": "12",
+    "value": "=b*a",
+  },
+  "e": {
+    "result": "19",
+    "value": "=c + d",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) complex circular reference 1`] = `
+{
+  "error": "Bad Request",
+  "message": "Circular reference found",
+  "statusCode": 400,
+}
+`;
+
+exports[`SpreadSheetController (e2e) complex circular reference 2`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "=a + 1",
+  },
+  "c": {
+    "result": "5",
+    "value": "=b + 2",
+  },
+  "d": {
+    "result": "9",
+    "value": "=c + 4",
+  },
+  "e": {
+    "result": "6",
+    "value": "=b + 3",
+  },
+  "f": {
+    "result": "20",
+    "value": "=d + 5 + e",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) complicated case 1`] = `
 {
   "a": {
     "result": "2",
@@ -25,7 +87,57 @@ exports[`SpreadSheetController (e2e) /:sheet_id (GET) complicated case 1`] = `
 }
 `;
 
-exports[`SpreadSheetController (e2e) /:sheet_id (GET) simple case 1`] = `
+exports[`SpreadSheetController (e2e) self reference 1`] = `
+{
+  "error": "Bad Request",
+  "message": "Self reference is not allowed",
+  "statusCode": 400,
+}
+`;
+
+exports[`SpreadSheetController (e2e) self reference 2`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) should update deps 1`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "=a + 1",
+  },
+  "c": {
+    "result": "11",
+    "value": "=e + 5",
+  },
+  "d": {
+    "result": "15",
+    "value": "=c + 4",
+  },
+  "e": {
+    "result": "6",
+    "value": "=b + 3",
+  },
+  "f": {
+    "result": "26",
+    "value": "=d + 5 + e",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) simple case 1`] = `
 {
   "var1": {
     "result": "2",
@@ -38,6 +150,40 @@ exports[`SpreadSheetController (e2e) /:sheet_id (GET) simple case 1`] = `
   "var3": {
     "result": "5",
     "value": "=var1+var2",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) simple circular reference 1`] = `
+{
+  "error": "Bad Request",
+  "message": "Circular reference found",
+  "statusCode": 400,
+}
+`;
+
+exports[`SpreadSheetController (e2e) simple circular reference 2`] = `
+{
+  "a": {
+    "result": "3",
+    "value": "=b",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) simple update case 1`] = `
+{
+  "a": {
+    "result": "test",
+    "value": "test",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
   },
 }
 `;

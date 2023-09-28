@@ -12,11 +12,17 @@ import {
   reverse,
   uniq,
 } from 'lodash';
-import { InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { EquationVariablesService } from './equation-variables.service';
+import { CellEntity } from '../database/entity/cell.entity';
+import { evalEquation } from './equation.utils';
 
 export interface RecalculationInput {
   id: string;
-  newValue: number;
 }
 
 export function buildRecalculationStages(
@@ -29,7 +35,6 @@ export function buildRecalculationStages(
     const availableNodes = Object.keys(
       pickBy(_deps, (it: string[]) => it.length === 0),
     );
-    debugger;
     if (availableNodes.length === 0) {
       logger.error('No available nodes', {
         _deps,
@@ -43,7 +48,6 @@ export function buildRecalculationStages(
     _deps = mapValues(_deps, (group) =>
       group.filter((it) => !availableNodes.includes(it)),
     );
-    debugger;
   }
   result = reverse(result);
   return result;
@@ -54,6 +58,8 @@ export class EquationRecalculateService {
 
   constructor(
     private readonly cellLinkRepository: Repository<CellLinkEntity>,
+    private readonly cellRepository: Repository<CellEntity>,
+    private readonly variablesService: EquationVariablesService,
   ) {}
 
   async recalculate(input: RecalculationInput): Promise<void> {
@@ -71,11 +77,36 @@ export class EquationRecalculateService {
       });
       throw new InternalServerErrorException('Stages wrong root calculation');
     }
+    let updatedCells: CellEntity[] = [];
     for (const stage of rest) {
       this.logger.debug('recalculating stage', {
         stage,
       });
+      const stageDepIds = await this.findDownstreamDeps(stage);
+      const vars = await this.variablesService.populateVariables(stageDepIds);
+      const stageCells = await this.cellRepository.find({
+        where: {
+          id: In(stage),
+        },
+        select: ['id', 'cellId', 'equation'],
+      });
+      for (const cell of stageCells) {
+        const { equation } = cell;
+        if (!equation) {
+          throw new InternalServerErrorException(
+            `Found cell in upsteam deps without equation ${cell.cellId}`,
+          );
+        }
+        const newResult = evalEquation(equation, vars);
+        this.variablesService.setValue(cell.id, {
+          cellId: cell.cellId,
+          value: newResult,
+        });
+        cell.result = newResult.toString();
+      }
+      updatedCells = updatedCells.concat(stageCells);
     }
+    await this.cellRepository.save(updatedCells);
   }
 
   private async buildUpstreamDeps(
@@ -84,9 +115,19 @@ export class EquationRecalculateService {
     let varsToCheck = [id];
     const result: Record<string, string[]> = {};
     while (varsToCheck.length) {
+      const defaults = varsToCheck.reduce(
+        (result, it) => {
+          result[it] = [];
+          return result;
+        },
+        {} as Record<string, string[]>,
+      );
       const current = await this.findUpstreamDeps(varsToCheck);
-      Object.assign(result, current);
+      Object.assign(result, defaults, current);
       const upstreamVars = uniq(flatten(Object.values(current)));
+      if (upstreamVars.includes(id)) {
+        throw new BadRequestException('Circular reference found');
+      }
       // TODO check circular dep
       const newVars = upstreamVars.filter((it) => !has(result, it));
       varsToCheck = newVars;
@@ -106,5 +147,15 @@ export class EquationRecalculateService {
     return mapValues(groupBy(entries, 'fromCellId'), (group) =>
       group.map((it) => it.toCellId),
     );
+  }
+
+  private async findDownstreamDeps(ids: string[]): Promise<string[]> {
+    const entries = await this.cellLinkRepository.find({
+      where: {
+        toCellId: In(ids),
+      },
+      select: ['toCellId', 'fromCellId'],
+    });
+    return uniq(entries.map((it) => it.fromCellId));
   }
 }

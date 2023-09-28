@@ -17,7 +17,7 @@ export class SpreadSheetController {
     @Param('cell_id') cellId: string,
     @Body() body: { value: string },
   ): Promise<CellData> {
-    return this.spreadSheetService.createCell({
+    return this.spreadSheetService.postCell({
       sheetId,
       cellId,
       value: body.value,

@@ -1,8 +1,9 @@
 import { In, Repository } from 'typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
 import { BadRequestException, Logger } from '@nestjs/common';
+import { has } from 'lodash';
 
-interface PopulatedData {
+export interface PopulatedData {
   cellId: string;
   value: number;
 }
@@ -54,5 +55,12 @@ export class EquationVariablesService {
       },
       {} as Record<string, number>,
     );
+  }
+
+  setValue(id: string, data: PopulatedData): void {
+    if (has(this.populated, id)) {
+      throw new Error(`Var is already populated ${id} : ${data.cellId}`);
+    }
+    this.populated[id] = data;
   }
 }
