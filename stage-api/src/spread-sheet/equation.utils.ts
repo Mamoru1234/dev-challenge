@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { EquationNode, EquationNodePlus } from 'equation-parser';
+import { EquationNode, EquationNodePlus, parse } from 'equation-parser';
 import { uniq } from 'lodash';
 
 export interface ConstantNode {
@@ -132,4 +132,17 @@ export function findVariables(equation: EquationNode): string[] {
     }
     return [];
   });
+}
+
+export function parseEquation(value: string): EquationNode | null {
+  if (!value.startsWith('=')) {
+    return null;
+  }
+  const parseResult = parse(value.slice(1));
+  if (parseResult.type === 'parser-error') {
+    throw new BadRequestException(
+      `Cannot parse equation error on [${parseResult.start}: ${parseResult.end}]`,
+    );
+  }
+  return parseResult;
 }

@@ -13,9 +13,9 @@ import {
   uniq,
 } from 'lodash';
 import {
-  BadRequestException,
   InternalServerErrorException,
   Logger,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { EquationVariablesService } from './equation-variables.service';
 import { CellEntity } from '../database/entity/cell.entity';
@@ -126,9 +126,8 @@ export class EquationRecalculateService {
       Object.assign(result, defaults, current);
       const upstreamVars = uniq(flatten(Object.values(current)));
       if (upstreamVars.includes(id)) {
-        throw new BadRequestException('Circular reference found');
+        throw new UnprocessableEntityException('Circular reference found');
       }
-      // TODO check circular dep
       const newVars = upstreamVars.filter((it) => !has(result, it));
       varsToCheck = newVars;
     }

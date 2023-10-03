@@ -1,7 +1,7 @@
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Not, Repository } from 'typeorm';
@@ -11,8 +11,7 @@ import {
   CreateCellInput,
   GetSheetOutput,
 } from './spread-sheet.interface';
-import { CellEquationParser } from './cell-equation.parser';
-import { evalEquation, findVariables } from './equation.utils';
+import { evalEquation, findVariables, parseEquation } from './equation.utils';
 import { EquationVariablesService } from './equation-variables.service';
 import { EquationNode } from 'equation-parser';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
@@ -28,7 +27,6 @@ export class SpreadSheetService {
   constructor(
     @InjectRepository(CellEntity)
     private readonly cellRepository: Repository<CellEntity>,
-    private readonly cellEquationParser: CellEquationParser,
     private dataSource: DataSource,
   ) {}
 
@@ -51,6 +49,23 @@ export class SpreadSheetService {
     }, {} as GetSheetOutput);
   }
 
+  async getCell(sheetId: string, cellId: string): Promise<CellData> {
+    const cell = await this.cellRepository.findOne({
+      where: {
+        sheetId,
+        cellId,
+      },
+      select: ['value', 'result'],
+    });
+    if (!cell) {
+      throw new NotFoundException('Cell not found');
+    }
+    return {
+      value: cell.value,
+      result: cell.result,
+    };
+  }
+
   postCell(input: CreateCellInput): Promise<CellData> {
     const { cellId, sheetId, value } = input;
     return this.dataSource.transaction(async (tx) => {
@@ -63,7 +78,7 @@ export class SpreadSheetService {
         },
         select: ['id'],
       });
-      const equation = this.cellEquationParser.parse(value);
+      const equation = parseEquation(value);
       const variablesService = new EquationVariablesService(cellRepository);
       const calculationOutput = equation
         ? await this.calculateEquation(sheetId, equation, variablesService)
@@ -81,7 +96,9 @@ export class SpreadSheetService {
       });
       if (calculationOutput) {
         if (calculationOutput.varIds.includes(cell.id)) {
-          throw new BadRequestException('Self reference is not allowed');
+          throw new UnprocessableEntityException(
+            'Self reference is not allowed',
+          );
         }
         variablesService.setValue(cell.id, {
           cellId,
@@ -155,7 +172,7 @@ export class SpreadSheetService {
     if (varsInDb.length !== vars.length) {
       const dbVars = varsInDb.map((it) => it.cellId);
       const wrongVars = vars.filter((it) => !dbVars.includes(it));
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Wrong link some variables are not defined ${JSON.stringify(
           wrongVars,
         )}`,

@@ -1,6 +1,6 @@
 import { In, Repository } from 'typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
-import { BadRequestException, Logger } from '@nestjs/common';
+import { Logger, UnprocessableEntityException } from '@nestjs/common';
 import { has } from 'lodash';
 
 export interface PopulatedData {
@@ -30,7 +30,7 @@ export class EquationVariablesService {
     if (missingVars.length !== varsInDb.length) {
       const dbVars = varsInDb.map((it) => it.id);
       const wrongVars = missingVars.filter((it) => !dbVars.includes(it));
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Wrong link some variables are not defined ${JSON.stringify(
           wrongVars,
         )}`,
@@ -38,6 +38,12 @@ export class EquationVariablesService {
     }
     const dbResult = varsInDb.reduce(
       (prev, it) => {
+        const value = +it.result;
+        if (Number.isNaN(value)) {
+          throw new UnprocessableEntityException(
+            `${it.cellId} is referenced in formula but cannot be parsed`,
+          );
+        }
         prev[it.id] = {
           cellId: it.cellId,
           value: +it.result,

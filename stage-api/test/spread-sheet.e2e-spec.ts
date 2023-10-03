@@ -12,6 +12,8 @@ describe('SpreadSheetController (e2e)', () => {
   const client = {
     getSheet: (sheetId: string) =>
       request(app.getHttpServer()).get(`/${sheetId}`),
+    getCell: (sheetId: string, cellId: string) =>
+      request(app.getHttpServer()).get(`/${sheetId}/${cellId}`),
     createCell: (sheetId: string, cellId: string, value: string) =>
       request(app.getHttpServer())
         .post(`/${sheetId}/${cellId}`)
@@ -129,7 +131,7 @@ describe('SpreadSheetController (e2e)', () => {
     ]);
     const { body } = await client
       .createCell('test', 'b', '=a')
-      .expect(HttpStatus.BAD_REQUEST);
+      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
     expect(body).toMatchSnapshot();
     const { body: sheetData } = await client
       .getSheet('test')
@@ -148,7 +150,7 @@ describe('SpreadSheetController (e2e)', () => {
     ]);
     const { body } = await client
       .createCell('test', 'c', '=b + f')
-      .expect(HttpStatus.BAD_REQUEST);
+      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
     expect(body).toMatchSnapshot();
     const { body: sheetData } = await client
       .getSheet('test')
@@ -179,11 +181,33 @@ describe('SpreadSheetController (e2e)', () => {
     ]);
     const { body } = await client
       .createCell('test', 'b', '=b+a')
-      .expect(HttpStatus.BAD_REQUEST);
+      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
     expect(body).toMatchSnapshot();
     const { body: sheetData } = await client
       .getSheet('test')
       .expect(HttpStatus.OK);
     expect(sheetData).toMatchSnapshot();
+  });
+
+  it('wrong reference value', async () => {
+    await createCells('test', [['a', 'test']]);
+    const { body } = await client
+      .createCell('test', 'b', '=a')
+      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
+    expect(body).toMatchSnapshot();
+  });
+
+  it('get single cell', async () => {
+    await createCells('test', [['a', 'test']]);
+    const { body } = await client.getCell('test', 'a').expect(HttpStatus.OK);
+    expect(body).toMatchSnapshot();
+  });
+
+  it('cell not found', async () => {
+    await createCells('test', [['a', 'test']]);
+    const { body } = await client
+      .getCell('test', 'b')
+      .expect(HttpStatus.NOT_FOUND);
+    expect(body).toMatchSnapshot();
   });
 });

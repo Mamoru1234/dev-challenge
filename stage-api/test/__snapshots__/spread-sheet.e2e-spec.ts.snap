@@ -1,5 +1,13 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SpreadSheetController (e2e) cell not found 1`] = `
+{
+  "error": "Not Found",
+  "message": "Cell not found",
+  "statusCode": 404,
+}
+`;
+
 exports[`SpreadSheetController (e2e) comples update case 1`] = `
 {
   "a": {
@@ -27,9 +35,9 @@ exports[`SpreadSheetController (e2e) comples update case 1`] = `
 
 exports[`SpreadSheetController (e2e) complex circular reference 1`] = `
 {
-  "error": "Bad Request",
+  "error": "Unprocessable Entity",
   "message": "Circular reference found",
-  "statusCode": 400,
+  "statusCode": 422,
 }
 `;
 
@@ -87,11 +95,18 @@ exports[`SpreadSheetController (e2e) complicated case 1`] = `
 }
 `;
 
+exports[`SpreadSheetController (e2e) get single cell 1`] = `
+{
+  "result": "test",
+  "value": "test",
+}
+`;
+
 exports[`SpreadSheetController (e2e) self reference 1`] = `
 {
-  "error": "Bad Request",
+  "error": "Unprocessable Entity",
   "message": "Self reference is not allowed",
-  "statusCode": 400,
+  "statusCode": 422,
 }
 `;
 
@@ -156,9 +171,9 @@ exports[`SpreadSheetController (e2e) simple case 1`] = `
 
 exports[`SpreadSheetController (e2e) simple circular reference 1`] = `
 {
-  "error": "Bad Request",
+  "error": "Unprocessable Entity",
   "message": "Circular reference found",
-  "statusCode": 400,
+  "statusCode": 422,
 }
 `;
 
@@ -185,5 +200,13 @@ exports[`SpreadSheetController (e2e) simple update case 1`] = `
     "result": "3",
     "value": "3",
   },
+}
+`;
+
+exports[`SpreadSheetController (e2e) wrong reference value 1`] = `
+{
+  "error": "Unprocessable Entity",
+  "message": "a is referenced in formula but cannot be parsed",
+  "statusCode": 422,
 }
 `;

@@ -11,8 +11,16 @@ export class SpreadSheetController {
     return this.spreadSheetService.getSheet(sheetId);
   }
 
+  @Get('/:sheet_id/:cell_id')
+  getCell(
+    @Param('sheet_id') sheetId: string,
+    @Param('cell_id') cellId: string,
+  ): Promise<CellData> {
+    return this.spreadSheetService.getCell(sheetId, cellId);
+  }
+
   @Post('/:sheet_id/:cell_id')
-  createCell(
+  postCell(
     @Param('sheet_id') sheetId: string,
     @Param('cell_id') cellId: string,
     @Body() body: { value: string },

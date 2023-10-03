@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`equation utils parseEquation should return equation node 1`] = `
+{
+  "a": {
+    "name": "a",
+    "type": "variable",
+  },
+  "b": {
+    "name": "b",
+    "type": "variable",
+  },
+  "type": "plus",
+}
+`;

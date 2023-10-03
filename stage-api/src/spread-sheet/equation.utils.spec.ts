@@ -1,5 +1,6 @@
 import { EquationNode, parse } from 'equation-parser';
-import { evalEquation, findVariables } from './equation.utils';
+import { evalEquation, findVariables, parseEquation } from './equation.utils';
+import { BadRequestException } from '@nestjs/common';
 
 describe('equation utils', () => {
   describe('evaluate', () => {
@@ -38,5 +39,21 @@ describe('equation utils', () => {
       ['1 + var', ['var']],
       ['1 + var1 / ter + 234', ['var1', 'ter']],
     ]);
+  });
+
+  describe('parseEquation', () => {
+    it('parse error', () => {
+      expect(() => parseEquation('=a +')).toThrow(BadRequestException);
+    });
+
+    it('should return null if not equation', () => {
+      const result = parseEquation('a + b');
+      expect(result).toBe(null);
+    });
+
+    it('should return equation node', () => {
+      const result = parseEquation('=a+b');
+      expect(result).toMatchSnapshot();
+    });
   });
 });

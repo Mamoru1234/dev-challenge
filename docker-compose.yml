@@ -1,0 +1,26 @@
+version: "3"
+services:
+  api:
+    image: stage-api:0.1
+    container_name: stage_api
+    build: ./stage-api
+    restart: always
+    command: sh -c "npm run typeorm migration:run & npm start"
+    depends_on:
+      - db
+    ports:
+      - "8080:3000"
+    environment:
+      APP_DB_HOST: db
+      APP_DB_USERNAME: postgres
+      APP_DB_PASSWORD: example
+
+  db:
+    image: postgres:15.4
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./local/init:/docker-entrypoint-initdb.d/:ro
+    environment:
+      POSTGRES_PASSWORD: example
