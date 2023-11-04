@@ -4,6 +4,7 @@ import { CellValueWebhookEntity } from '../database/entity/cell-value-webhook';
 import { In, Repository } from 'typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
 import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CellWebhookProcessingService {
@@ -36,9 +37,11 @@ export class CellWebhookProcessingService {
     cell: CellEntity,
     hook: CellValueWebhookEntity,
   ): Promise<void> {
-    await this.httpService.post(hook.url, {
-      value: cell.value,
-      result: cell.result,
-    });
+    await firstValueFrom(
+      this.httpService.post(hook.url, {
+        value: cell.value,
+        result: cell.result,
+      }),
+    );
   }
 }

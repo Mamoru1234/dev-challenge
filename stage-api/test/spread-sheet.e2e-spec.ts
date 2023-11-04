@@ -242,7 +242,7 @@ describe('Core spreadsheet API', () => {
     await createCells('test', [['a', 'test']]);
     const { body } = await client
       .createCell('test', 'b', '=a')
-      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
+      .expect(HttpStatus.CREATED);
     expect(body).toMatchSnapshot();
   });
 

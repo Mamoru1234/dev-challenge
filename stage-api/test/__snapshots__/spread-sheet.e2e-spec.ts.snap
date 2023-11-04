@@ -289,8 +289,7 @@ exports[`Core spreadsheet API simple update case 1`] = `
 
 exports[`Core spreadsheet API wrong reference value 1`] = `
 {
-  "error": "Unprocessable Entity",
-  "message": "a is referenced in formula but cannot be parsed",
-  "statusCode": 422,
+  "result": "test",
+  "value": "=a",
 }
 `;

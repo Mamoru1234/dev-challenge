@@ -39,12 +39,6 @@ export class EquationVariablesService {
     }
     const dbResult = varsInDb.reduce(
       (prev, it) => {
-        const value = +it.result;
-        if (Number.isNaN(value)) {
-          throw new UnprocessableEntityException(
-            `${it.cellId} is referenced in formula but cannot be parsed`,
-          );
-        }
         prev[it.id] = {
           cellId: it.cellId,
           value: parseValue(it.result),

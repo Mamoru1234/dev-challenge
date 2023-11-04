@@ -8,10 +8,11 @@ import * as request from 'supertest';
 import { CellValueWebhookEntity } from '../src/database/entity/cell-value-webhook';
 import { pick } from 'lodash';
 import { HttpService } from '@nestjs/axios';
+import { from } from 'rxjs';
 
 const TEST_SERVICE = 'https://test.service.com';
 
-describe.skip('Cell webhooks', () => {
+describe('Cell webhooks', () => {
   let app: INestApplication;
   let cellValueWebhookRepository: Repository<CellValueWebhookEntity>;
   const httpServiceMock = {
@@ -31,6 +32,7 @@ describe.skip('Cell webhooks', () => {
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    httpServiceMock.post.mockReturnValue(from(Promise.resolve()));
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })

@@ -1,8 +1,8 @@
 import { Expose } from 'class-transformer';
-import { IsNumberString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class ExternalResourceResponse {
   @Expose()
-  @IsNumberString()
+  @IsString()
   result: string;
 }

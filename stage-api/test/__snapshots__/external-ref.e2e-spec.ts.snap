@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`External ref function API test simple case 1`] = `
+{
+  "result": "Hello world from API",
+  "value": "=EXTERNAL_REF(url)",
+}
+`;

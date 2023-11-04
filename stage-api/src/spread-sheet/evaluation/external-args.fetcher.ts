@@ -37,6 +37,7 @@ export class ExternalArgsFetcher {
       if (e instanceof BadRequestException) {
         throw e;
       }
+      this.logger.warn('Error during fetch', e);
       throw new BadRequestException('External arg cannot be fetched');
     }
   }

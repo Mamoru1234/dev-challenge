@@ -141,7 +141,7 @@ export class SpreadSheetService {
         );
       }
       return {
-        result: value,
+        result,
         value,
       };
     });
