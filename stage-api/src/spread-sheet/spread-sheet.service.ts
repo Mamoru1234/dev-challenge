@@ -12,11 +12,12 @@ import {
   GetSheetOutput,
 } from './spread-sheet.interface';
 import { evalEquation, findVariables, parseEquation } from './equation.utils';
-import { EquationVariablesService } from './equation-variables.service';
 import { EquationNode } from 'equation-parser';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
 import { EquationRecalculateService } from './equation-recalculation.service';
 import { CellWebhookProcessingService } from '../cell-webhook/cell-webhook-processing.service';
+import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
+import { EvaluationContext } from './evaluation/evaluation-context';
 
 export interface CalculateEquationOutput {
   varIds: string[];
@@ -30,6 +31,8 @@ export class SpreadSheetService {
     private readonly cellRepository: Repository<CellEntity>,
     private readonly dataSource: DataSource,
     private readonly cellWebhookProcessingService: CellWebhookProcessingService,
+    private readonly evaluationContextFactory: EvaluationContextFactory,
+    private readonly equationRecalculateService: EquationRecalculateService,
   ) {}
 
   async getSheet(sheetId: string): Promise<GetSheetOutput> {
@@ -81,9 +84,9 @@ export class SpreadSheetService {
         select: ['id', 'result', 'value'],
       });
       const equation = parseEquation(value);
-      const variablesService = new EquationVariablesService(cellRepository);
+      const context = this.evaluationContextFactory.createContext(tx);
       const calculationOutput = equation
-        ? await this.calculateEquation(sheetId, equation, variablesService)
+        ? await this.calculateEquation(sheetId, equation, context)
         : undefined;
       const result = calculationOutput
         ? calculationOutput.result.toString()
@@ -113,7 +116,7 @@ export class SpreadSheetService {
             'Self reference is not allowed',
           );
         }
-        variablesService.setValue(cell.id, {
+        context.variablesService.setValue(cell.id, {
           cellId,
           value: +result,
         });
@@ -126,13 +129,11 @@ export class SpreadSheetService {
       // TODO cell update links for cells with no calculations
       // TODO cell update to non number
       if (existingCell) {
-        const equationRecalculateService = new EquationRecalculateService(
-          cellLinkRepository,
-          cellRepository,
-          variablesService,
-        );
-        const updatedCells = await equationRecalculateService.recalculate({
+        // TODO check update with same result
+        const updatedCells = await this.equationRecalculateService.recalculate({
           id: cell.id,
+          context,
+          tx,
         });
         await this.cellWebhookProcessingService.processHooks(
           updatedCells.concat([existingCell]),
@@ -148,12 +149,12 @@ export class SpreadSheetService {
   private async calculateEquation(
     sheetId: string,
     equation: EquationNode,
-    variablesService: EquationVariablesService,
+    context: EvaluationContext,
   ): Promise<CalculateEquationOutput> {
     const variableNames = findVariables(equation);
     const varIds = await this.mapVarNamesToIds(sheetId, variableNames);
-    const varValues = await variablesService.populateVariables(varIds);
-    const result = evalEquation(equation, varValues);
+    const varValues = await context.variablesService.populateVariables(varIds);
+    const result = await evalEquation(equation, varValues, context);
     return {
       result,
       varIds,

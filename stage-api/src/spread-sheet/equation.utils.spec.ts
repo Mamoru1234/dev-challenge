@@ -1,15 +1,20 @@
 import { EquationNode, parse } from 'equation-parser';
 import { evalEquation, findVariables, parseEquation } from './equation.utils';
 import { BadRequestException } from '@nestjs/common';
+import { EvaluationContext } from './evaluation/evaluation-context';
 
 describe('equation utils', () => {
   describe('evaluate', () => {
     function generateCases(cases: [string, number][]) {
       for (const current of cases) {
-        it(`${current[0]} = ${current[1]}`, () => {
-          expect(evalEquation(parse(current[0]) as EquationNode, {})).toEqual(
-            current[1],
-          );
+        it(`${current[0]} = ${current[1]}`, async () => {
+          expect(
+            await evalEquation(
+              parse(current[0]) as EquationNode,
+              {},
+              new EvaluationContext(null, null),
+            ),
+          ).toEqual(current[1]);
         });
       }
     }

@@ -1,5 +1,5 @@
 import { In, Repository } from 'typeorm';
-import { CellEntity } from '../database/entity/cell.entity';
+import { CellEntity } from '../../database/entity/cell.entity';
 import { Logger, UnprocessableEntityException } from '@nestjs/common';
 import { has } from 'lodash';
 

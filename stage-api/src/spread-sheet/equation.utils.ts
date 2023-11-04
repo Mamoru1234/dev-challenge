@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { EquationNode, EquationNodePlus, parse } from 'equation-parser';
 import { mean, uniq } from 'lodash';
+import { EvaluationContext } from './evaluation/evaluation-context';
 
 export interface ConstantNode {
   type: 'constant';
@@ -91,33 +92,37 @@ export function traverseEquation<R>(
 export function evalEquation(
   equation: EquationNode,
   variables: Record<string, number>,
-): number {
-  return traverseEquation(equation, (visit: VisitNode<number>) => {
-    if (visit.type === 'constant' && visit.name === 'number') {
-      return +visit.value;
-    }
-    if (visit.type === 'constant' && visit.name === 'variable') {
-      const varName = visit.value.toLowerCase();
-      const mapped = variables[varName];
-      if (mapped == null) {
-        throw new BadRequestException(`Unknown variable ${visit.value}`);
+  context: EvaluationContext,
+): Promise<number> {
+  return traverseEquation(
+    equation,
+    (visit: VisitNode<Promise<number>>): Promise<number> => {
+      if (visit.type === 'constant' && visit.name === 'number') {
+        return Promise.resolve(+visit.value);
       }
-      return mapped;
-    }
-    if (visit.type === 'binary-operator') {
-      const operator = BINARY_OPERATORS[visit.name];
-      return operator(visit.a, visit.b);
-    }
-    if (visit.type === 'function') {
-      const funcName = visit.name.toLowerCase();
-      const mapped = FUNCTIONS[funcName];
-      if (!mapped) {
-        throw new BadRequestException(`Unknown function ${funcName}`);
+      if (visit.type === 'constant' && visit.name === 'variable') {
+        const varName = visit.value.toLowerCase();
+        const mapped = variables[varName];
+        if (mapped == null) {
+          throw new BadRequestException(`Unknown variable ${visit.value}`);
+        }
+        return Promise.resolve(mapped);
       }
-      return mapped(visit.args);
-    }
-    throw new BadRequestException(`Unknown node ${visit.type}`);
-  });
+      if (visit.type === 'binary-operator') {
+        const operator = BINARY_OPERATORS[visit.name];
+        return Promise.all([visit.a, visit.b]).then(([a, b]) => operator(a, b));
+      }
+      if (visit.type === 'function') {
+        const funcName = visit.name.toLowerCase();
+        const mapped = FUNCTIONS[funcName];
+        if (!mapped) {
+          throw new BadRequestException(`Unknown function ${funcName}`);
+        }
+        return Promise.all(visit.args).then((args) => mapped(args, context));
+      }
+      throw new BadRequestException(`Unknown node ${visit.type}`);
+    },
+  );
 }
 
 export function findVariables(equation: EquationNode): string[] {

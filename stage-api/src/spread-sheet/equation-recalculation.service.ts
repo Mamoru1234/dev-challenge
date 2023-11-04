@@ -1,4 +1,4 @@
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
 import {
   cloneDeep,
@@ -13,16 +13,19 @@ import {
   uniq,
 } from 'lodash';
 import {
+  Injectable,
   InternalServerErrorException,
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { EquationVariablesService } from './equation-variables.service';
 import { CellEntity } from '../database/entity/cell.entity';
 import { evalEquation } from './equation.utils';
+import { EvaluationContext } from './evaluation/evaluation-context';
 
 export interface RecalculationInput {
   id: string;
+  context: EvaluationContext;
+  tx: EntityManager;
 }
 
 export function buildRecalculationStages(
@@ -53,17 +56,17 @@ export function buildRecalculationStages(
   return result;
 }
 
+@Injectable()
 export class EquationRecalculateService {
   private readonly logger = new Logger(EquationRecalculateService.name);
 
-  constructor(
-    private readonly cellLinkRepository: Repository<CellLinkEntity>,
-    private readonly cellRepository: Repository<CellEntity>,
-    private readonly variablesService: EquationVariablesService,
-  ) {}
+  constructor() {}
 
   async recalculate(input: RecalculationInput): Promise<CellEntity[]> {
-    const deps = await this.buildUpstreamDeps(input.id);
+    const cellLinkRepository = input.tx.getRepository(CellLinkEntity);
+    const cellRepository = input.tx.getRepository(CellEntity);
+    const { context } = input;
+    const deps = await this.buildUpstreamDeps(cellLinkRepository, input.id);
     const stages = buildRecalculationStages(this.logger, deps);
     if (!stages.length) {
       throw new InternalServerErrorException('Invalid empty stages');
@@ -82,9 +85,13 @@ export class EquationRecalculateService {
       this.logger.debug('recalculating stage', {
         stage,
       });
-      const stageDepIds = await this.findDownstreamDeps(stage);
-      const vars = await this.variablesService.populateVariables(stageDepIds);
-      const stageCells = await this.cellRepository.find({
+      const stageDepIds = await this.findDownstreamDeps(
+        cellLinkRepository,
+        stage,
+      );
+      const vars =
+        await context.variablesService.populateVariables(stageDepIds);
+      const stageCells = await cellRepository.find({
         where: {
           id: In(stage),
         },
@@ -98,8 +105,8 @@ export class EquationRecalculateService {
             `Found cell in upsteam deps without equation ${cell.cellId}`,
           );
         }
-        const newResult = evalEquation(equation, vars);
-        this.variablesService.setValue(cell.id, {
+        const newResult = await evalEquation(equation, vars, context);
+        context.variablesService.setValue(cell.id, {
           cellId: cell.cellId,
           value: newResult,
         });
@@ -111,12 +118,13 @@ export class EquationRecalculateService {
       updatedCells = updatedCells.concat(cellsUpdateInStage);
     }
     if (updatedCells.length) {
-      await this.cellRepository.save(updatedCells);
+      await cellRepository.save(updatedCells);
     }
     return updatedCells;
   }
 
   private async buildUpstreamDeps(
+    cellLinkRepository: Repository<CellLinkEntity>,
     id: string,
   ): Promise<Record<string, string[]>> {
     let varsToCheck = [id];
@@ -129,7 +137,10 @@ export class EquationRecalculateService {
         },
         {} as Record<string, string[]>,
       );
-      const current = await this.findUpstreamDeps(varsToCheck);
+      const current = await this.findUpstreamDeps(
+        cellLinkRepository,
+        varsToCheck,
+      );
       Object.assign(result, defaults, current);
       const upstreamVars = uniq(flatten(Object.values(current)));
       if (upstreamVars.includes(id)) {
@@ -142,9 +153,10 @@ export class EquationRecalculateService {
   }
 
   private async findUpstreamDeps(
+    cellLinkRepository: Repository<CellLinkEntity>,
     ids: string[],
   ): Promise<Record<string, string[]>> {
-    const entries = await this.cellLinkRepository.find({
+    const entries = await cellLinkRepository.find({
       where: {
         fromCellId: In(ids),
       },
@@ -155,8 +167,11 @@ export class EquationRecalculateService {
     );
   }
 
-  private async findDownstreamDeps(ids: string[]): Promise<string[]> {
-    const entries = await this.cellLinkRepository.find({
+  private async findDownstreamDeps(
+    cellLinkRepository: Repository<CellLinkEntity>,
+    ids: string[],
+  ): Promise<string[]> {
+    const entries = await cellLinkRepository.find({
       where: {
         toCellId: In(ids),
       },
