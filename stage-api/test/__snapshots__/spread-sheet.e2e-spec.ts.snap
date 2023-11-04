@@ -173,6 +173,40 @@ exports[`Core spreadsheet API self reference 2`] = `
 }
 `;
 
+exports[`Core spreadsheet API should handle update to string 1`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "5",
+    "value": "=a+b",
+  },
+}
+`;
+
+exports[`Core spreadsheet API should handle update to string 2`] = `
+{
+  "a": {
+    "result": "number of persons: ",
+    "value": "number of persons: ",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "number of persons: 3",
+    "value": "=a+b",
+  },
+}
+`;
+
 exports[`Core spreadsheet API should update deps 1`] = `
 {
   "a": {
