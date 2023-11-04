@@ -110,7 +110,24 @@ describe('Core spreadsheet API', () => {
     expect(body).toMatchSnapshot();
   });
 
-  it('comples update case', async () => {
+  it('simple dendency update', async () => {
+    await createCells('test', [
+      ['a', '2'],
+      ['b', '3'],
+      ['c', '=a+b'],
+    ]);
+    const { body: beforeUpdate } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(beforeUpdate).toMatchSnapshot();
+    await client.createCell('test', 'a', '7').expect(HttpStatus.CREATED);
+    const { body: afterUpdate } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(afterUpdate).toMatchSnapshot();
+  });
+
+  it('complex update case', async () => {
     await createCells('test', [
       ['a', '2'],
       ['b', '3'],

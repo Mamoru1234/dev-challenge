@@ -21,6 +21,7 @@ import {
 import { CellEntity } from '../database/entity/cell.entity';
 import { evalEquation } from './equation.utils';
 import { EvaluationContext } from './evaluation/evaluation-context';
+import { isEqualValues, parseValue, valueToString } from './equation-value';
 
 export interface RecalculationInput {
   id: string;
@@ -110,8 +111,8 @@ export class EquationRecalculateService {
           cellId: cell.cellId,
           value: newResult,
         });
-        if (newResult !== +cell.result) {
-          cell.result = newResult.toString();
+        if (!isEqualValues(newResult, parseValue(cell.result))) {
+          cell.result = valueToString(newResult);
           cellsUpdateInStage.push(cell);
         }
       }

@@ -2,6 +2,7 @@ import { EquationNode, parse } from 'equation-parser';
 import { evalEquation, findVariables, parseEquation } from './equation.utils';
 import { BadRequestException } from '@nestjs/common';
 import { EvaluationContext } from './evaluation/evaluation-context';
+import { createNumberValue } from './equation-value';
 
 describe('equation utils', () => {
   describe('evaluate', () => {
@@ -14,7 +15,7 @@ describe('equation utils', () => {
               {},
               new EvaluationContext(null, null),
             ),
-          ).toEqual(current[1]);
+          ).toEqual(createNumberValue(current[1]));
         });
       }
     }

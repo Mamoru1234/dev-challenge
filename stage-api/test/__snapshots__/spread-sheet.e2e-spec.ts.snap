@@ -8,31 +8,6 @@ exports[`Core spreadsheet API cell not found 1`] = `
 }
 `;
 
-exports[`Core spreadsheet API comples update case 1`] = `
-{
-  "a": {
-    "result": "4",
-    "value": "4",
-  },
-  "b": {
-    "result": "3",
-    "value": "3",
-  },
-  "c": {
-    "result": "7",
-    "value": "=a+b",
-  },
-  "d": {
-    "result": "12",
-    "value": "=b*a",
-  },
-  "e": {
-    "result": "19",
-    "value": "=c + d",
-  },
-}
-`;
-
 exports[`Core spreadsheet API complex circular reference 1`] = `
 {
   "error": "Unprocessable Entity",
@@ -103,6 +78,31 @@ exports[`Core spreadsheet API complex circular reference with different cases 2`
   "f": {
     "result": "20",
     "value": "=dummy + 5 + EggPlanT",
+  },
+}
+`;
+
+exports[`Core spreadsheet API complex update case 1`] = `
+{
+  "a": {
+    "result": "4",
+    "value": "4",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "7",
+    "value": "=a+b",
+  },
+  "d": {
+    "result": "12",
+    "value": "=b*a",
+  },
+  "e": {
+    "result": "19",
+    "value": "=c + d",
   },
 }
 `;
@@ -236,6 +236,40 @@ exports[`Core spreadsheet API simple circular reference 2`] = `
   "b": {
     "result": "3",
     "value": "3",
+  },
+}
+`;
+
+exports[`Core spreadsheet API simple dendency update 1`] = `
+{
+  "a": {
+    "result": "2",
+    "value": "2",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "5",
+    "value": "=a+b",
+  },
+}
+`;
+
+exports[`Core spreadsheet API simple dendency update 2`] = `
+{
+  "a": {
+    "result": "7",
+    "value": "7",
+  },
+  "b": {
+    "result": "3",
+    "value": "3",
+  },
+  "c": {
+    "result": "10",
+    "value": "=a+b",
   },
 }
 `;

@@ -18,10 +18,11 @@ import { EquationRecalculateService } from './equation-recalculation.service';
 import { CellWebhookProcessingService } from '../cell-webhook/cell-webhook-processing.service';
 import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
 import { EvaluationContext } from './evaluation/evaluation-context';
+import { EquationValue, valueToString } from './equation-value';
 
 export interface CalculateEquationOutput {
   varIds: string[];
-  result: number;
+  result: EquationValue;
 }
 
 @Injectable()
@@ -89,7 +90,7 @@ export class SpreadSheetService {
         ? await this.calculateEquation(sheetId, equation, context)
         : undefined;
       const result = calculationOutput
-        ? calculationOutput.result.toString()
+        ? valueToString(calculationOutput.result)
         : value;
       // cell is not updated no actions needed
       if (
@@ -118,7 +119,7 @@ export class SpreadSheetService {
         }
         context.variablesService.setValue(cell.id, {
           cellId,
-          value: +result,
+          value: calculationOutput.result,
         });
         await this.saveEquationLinks(
           cellLinkRepository,

@@ -2,6 +2,15 @@ import { BadRequestException } from '@nestjs/common';
 import { EquationNode, EquationNodePlus, parse } from 'equation-parser';
 import { mean, uniq } from 'lodash';
 import { EvaluationContext } from './evaluation/evaluation-context';
+import { isURL } from 'class-validator';
+import {
+  EquationValue,
+  convertToNumbers,
+  createNumberValue,
+  isNumberValue,
+  isStringValue,
+  parseValue,
+} from './equation-value';
 
 export interface ConstantNode {
   type: 'constant';
@@ -30,18 +39,66 @@ export type VisitNode<R> =
 export type NodeVisitor<R> = (node: VisitNode<R>) => R;
 
 export const FUNCTIONS = {
-  max: (args: number[]) => Math.max(...args),
-  min: (args: number[]) => Math.min(...args),
-  sum: (args: number[]) => args.reduce((acc, it) => acc + it, 0),
-  avg: (args: number[]) => mean(args),
+  max: (args: EquationValue[]): EquationValue =>
+    createNumberValue(Math.max(...convertToNumbers(args))),
+  min: (args: EquationValue[]): EquationValue =>
+    createNumberValue(Math.min(...convertToNumbers(args))),
+  sum: (args: EquationValue[]): EquationValue =>
+    createNumberValue(convertToNumbers(args).reduce((acc, it) => acc + it, 0)),
+  avg: (args: EquationValue[]): EquationValue =>
+    createNumberValue(mean(convertToNumbers(args))),
+  external_ref: async (
+    args: EquationValue[],
+    context: EvaluationContext,
+  ): Promise<EquationValue> => {
+    if (args.length !== 1) {
+      throw new BadRequestException('[external_ref] Wrong number of args');
+    }
+    const [url] = args;
+    if (!isStringValue(url)) {
+      throw new BadRequestException(
+        '[external_ref] Unsupported value received',
+      );
+    }
+    if (!isURL(url.value, { protocols: ['https'], require_protocol: true })) {
+      throw new BadRequestException(
+        `[external_ref] Received invalid URL ${url}`,
+      );
+    }
+    const externalValue = await context.externalArgsFetcher.fetch(url.value);
+    return parseValue(externalValue);
+  },
 };
 
 export const BINARY_OPERATORS = {
-  plus: (a: number, b: number) => a + b,
-  minus: (a: number, b: number) => a - b,
-  'divide-fraction': (a: number, b: number) => a / b,
-  'multiply-dot': (a: number, b: number) => a * b,
-  power: (a: number, b: number) => Math.pow(a, b),
+  plus: (a: EquationValue, b: EquationValue): EquationValue => {
+    if (isNumberValue(a) && isNumberValue(b)) {
+      return createNumberValue(a.value + b.value);
+    }
+    return {
+      type: 'string',
+      value: a.value.toString() + b.value.toString(),
+    };
+  },
+  minus: (_a: EquationValue, _b: EquationValue): EquationValue => {
+    const [a, b] = convertToNumbers([_a, _b]);
+    return createNumberValue(a - b);
+  },
+  'divide-fraction': (_a: EquationValue, _b: EquationValue): EquationValue => {
+    const [a, b] = convertToNumbers([_a, _b]);
+    if (b === 0) {
+      throw new BadRequestException('Zero division');
+    }
+    return createNumberValue(a / b);
+  },
+  'multiply-dot': (_a: EquationValue, _b: EquationValue): EquationValue => {
+    const [a, b] = convertToNumbers([_a, _b]);
+    return createNumberValue(a * b);
+  },
+  power: (_a: EquationValue, _b: EquationValue): EquationValue => {
+    const [a, b] = convertToNumbers([_a, _b]);
+    return createNumberValue(Math.pow(a, b));
+  },
 };
 
 const BINARY_OPERATORS_NAMES = Object.keys(BINARY_OPERATORS);
@@ -91,14 +148,14 @@ export function traverseEquation<R>(
 
 export function evalEquation(
   equation: EquationNode,
-  variables: Record<string, number>,
+  variables: Record<string, EquationValue>,
   context: EvaluationContext,
-): Promise<number> {
+): Promise<EquationValue> {
   return traverseEquation(
     equation,
-    (visit: VisitNode<Promise<number>>): Promise<number> => {
+    (visit: VisitNode<Promise<EquationValue>>): Promise<EquationValue> => {
       if (visit.type === 'constant' && visit.name === 'number') {
-        return Promise.resolve(+visit.value);
+        return Promise.resolve(createNumberValue(+visit.value));
       }
       if (visit.type === 'constant' && visit.name === 'variable') {
         const varName = visit.value.toLowerCase();

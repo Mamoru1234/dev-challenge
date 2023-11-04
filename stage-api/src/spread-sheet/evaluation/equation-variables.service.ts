@@ -2,10 +2,11 @@ import { In, Repository } from 'typeorm';
 import { CellEntity } from '../../database/entity/cell.entity';
 import { Logger, UnprocessableEntityException } from '@nestjs/common';
 import { has } from 'lodash';
+import { EquationValue, parseValue } from '../equation-value';
 
 export interface PopulatedData {
   cellId: string;
-  value: number;
+  value: EquationValue;
 }
 
 export class EquationVariablesService {
@@ -15,7 +16,7 @@ export class EquationVariablesService {
 
   async populateVariables(
     variables: string[],
-  ): Promise<Record<string, number>> {
+  ): Promise<Record<string, EquationValue>> {
     const populatedVars = Object.keys(this.populated);
     const missingVars = variables.filter((it) => !populatedVars.includes(it));
     this.logger.log('Vars to be loaded from DB', {
@@ -46,7 +47,7 @@ export class EquationVariablesService {
         }
         prev[it.id] = {
           cellId: it.cellId,
-          value: +it.result,
+          value: parseValue(it.result),
         };
         return prev;
       },
@@ -59,7 +60,7 @@ export class EquationVariablesService {
         agr[varData.cellId] = varData.value;
         return agr;
       },
-      {} as Record<string, number>,
+      {} as Record<string, EquationValue>,
     );
   }
 
