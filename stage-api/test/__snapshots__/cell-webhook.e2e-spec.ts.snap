@@ -42,6 +42,49 @@ exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe invalid request webhoo
 }
 `;
 
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe should call hook for cells updated 1`] = `
+[
+  [
+    "https://test.service.com/hook",
+    {
+      "result": "4",
+      "value": "=a+1",
+    },
+  ],
+  [
+    "https://test.service.com/hook_c",
+    {
+      "result": "5",
+      "value": "=B+1",
+    },
+  ],
+]
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe should call hook only for cells updated 1`] = `
+[
+  [
+    "https://test.service.com/hook",
+    {
+      "result": "4",
+      "value": "=a+1",
+    },
+  ],
+]
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe should call hook when value update 1`] = `
+[
+  [
+    "https://test.service.com/hook",
+    {
+      "result": "aTestValue",
+      "value": "aTestValue",
+    },
+  ],
+]
+`;
+
 exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe should create subscription 1`] = `
 [
   {

@@ -62,7 +62,7 @@ export class EquationRecalculateService {
     private readonly variablesService: EquationVariablesService,
   ) {}
 
-  async recalculate(input: RecalculationInput): Promise<void> {
+  async recalculate(input: RecalculationInput): Promise<CellEntity[]> {
     const deps = await this.buildUpstreamDeps(input.id);
     const stages = buildRecalculationStages(this.logger, deps);
     if (!stages.length) {
@@ -88,8 +88,9 @@ export class EquationRecalculateService {
         where: {
           id: In(stage),
         },
-        select: ['id', 'cellId', 'equation'],
+        select: ['id', 'cellId', 'equation', 'result', 'value'],
       });
+      const cellsUpdateInStage = [];
       for (const cell of stageCells) {
         const { equation } = cell;
         if (!equation) {
@@ -102,11 +103,17 @@ export class EquationRecalculateService {
           cellId: cell.cellId,
           value: newResult,
         });
-        cell.result = newResult.toString();
+        if (newResult !== +cell.result) {
+          cell.result = newResult.toString();
+          cellsUpdateInStage.push(cell);
+        }
       }
-      updatedCells = updatedCells.concat(stageCells);
+      updatedCells = updatedCells.concat(cellsUpdateInStage);
     }
-    await this.cellRepository.save(updatedCells);
+    if (updatedCells.length) {
+      await this.cellRepository.save(updatedCells);
+    }
+    return updatedCells;
   }
 
   private async buildUpstreamDeps(

@@ -5,6 +5,7 @@ import { AppModule } from './../src/app.module';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CellLinkEntity } from '../src/database/entity/cell-link.entity';
+import { enableValidation } from '../src/app.utils';
 
 describe.skip('Core spreadsheet API', () => {
   let app: INestApplication;
@@ -26,6 +27,7 @@ describe.skip('Core spreadsheet API', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    enableValidation(app);
     await app.init();
     const dataSource: DataSource = app.get(getDataSourceToken('default'));
     cellLinkRepository = dataSource.getRepository(CellLinkEntity);

@@ -16,6 +16,7 @@ import { EquationVariablesService } from './equation-variables.service';
 import { EquationNode } from 'equation-parser';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
 import { EquationRecalculateService } from './equation-recalculation.service';
+import { CellWebhookProcessingService } from '../cell-webhook/cell-webhook-processing.service';
 
 export interface CalculateEquationOutput {
   varIds: string[];
@@ -27,7 +28,8 @@ export class SpreadSheetService {
   constructor(
     @InjectRepository(CellEntity)
     private readonly cellRepository: Repository<CellEntity>,
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
+    private readonly cellWebhookProcessingService: CellWebhookProcessingService,
   ) {}
 
   async getSheet(sheetId: string): Promise<GetSheetOutput> {
@@ -76,7 +78,7 @@ export class SpreadSheetService {
           sheetId,
           cellId,
         },
-        select: ['id'],
+        select: ['id', 'result', 'value'],
       });
       const equation = parseEquation(value);
       const variablesService = new EquationVariablesService(cellRepository);
@@ -86,6 +88,17 @@ export class SpreadSheetService {
       const result = calculationOutput
         ? calculationOutput.result.toString()
         : value;
+      // cell is not updated no actions needed
+      if (
+        existingCell &&
+        existingCell.result === result &&
+        existingCell.value === value
+      ) {
+        return {
+          result: value,
+          value,
+        };
+      }
       const cell = await cellRepository.save({
         id: existingCell?.id,
         sheetId,
@@ -110,15 +123,20 @@ export class SpreadSheetService {
           calculationOutput.varIds,
         );
       }
+      // TODO cell update links for cells with no calculations
+      // TODO cell update to non number
       if (existingCell) {
         const equationRecalculateService = new EquationRecalculateService(
           cellLinkRepository,
           cellRepository,
           variablesService,
         );
-        await equationRecalculateService.recalculate({
+        const updatedCells = await equationRecalculateService.recalculate({
           id: cell.id,
         });
+        await this.cellWebhookProcessingService.processHooks(
+          updatedCells.concat([existingCell]),
+        );
       }
       return {
         result: value,

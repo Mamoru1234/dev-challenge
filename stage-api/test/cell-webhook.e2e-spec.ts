@@ -7,10 +7,16 @@ import { DataSource, Repository } from 'typeorm';
 import * as request from 'supertest';
 import { CellValueWebhookEntity } from '../src/database/entity/cell-value-webhook';
 import { pick } from 'lodash';
+import { HttpService } from '@nestjs/axios';
+
+const TEST_SERVICE = 'https://test.service.com';
 
 describe('Cell webhooks', () => {
   let app: INestApplication;
   let cellValueWebhookRepository: Repository<CellValueWebhookEntity>;
+  const httpServiceMock = {
+    post: jest.fn(),
+  };
 
   const client = {
     subscribe: (sheetId: string, cellId: string, body: any) =>
@@ -24,9 +30,13 @@ describe('Cell webhooks', () => {
   };
 
   beforeEach(async () => {
+    jest.resetAllMocks();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(HttpService)
+      .useValue(httpServiceMock)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     enableValidation(app);
@@ -83,7 +93,7 @@ describe('Cell webhooks', () => {
       });
     });
 
-    it.only('should create subscription', async () => {
+    it('should create subscription', async () => {
       await client
         .createCell('test', 'test', 'aTestValue')
         .expect(HttpStatus.CREATED);
@@ -94,6 +104,77 @@ describe('Cell webhooks', () => {
         .expect(HttpStatus.CREATED);
       const webhooks = await cellValueWebhookRepository.find();
       expect(webhooks.map((it) => pick(it, 'url'))).toMatchSnapshot();
+    });
+
+    it('should not execute hook if nothing changed', async () => {
+      await client
+        .createCell('test', 'test', 'aTestValue')
+        .expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'test', {
+          webhook_url: `${TEST_SERVICE}/hook`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client
+        .createCell('test', 'test', 'aTestValue')
+        .expect(HttpStatus.CREATED);
+      expect(httpServiceMock.post).not.toBeCalled();
+    });
+
+    it('should call hook when value update', async () => {
+      await client
+        .createCell('test', 'test', 'aTestValue')
+        .expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'test', {
+          webhook_url: `${TEST_SERVICE}/hook`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client
+        .createCell('test', 'test', 'newValue')
+        .expect(HttpStatus.CREATED);
+      expect(httpServiceMock.post).toBeCalled();
+      expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
+    });
+
+    it('should call hook for cells updated', async () => {
+      await client.createCell('test', 'a', '2').expect(HttpStatus.CREATED);
+      await client.createCell('test', 'b', '=a+1').expect(HttpStatus.CREATED);
+      await client.createCell('test', 'c', '=B+1').expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'b', {
+          webhook_url: `${TEST_SERVICE}/hook`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'c', {
+          webhook_url: `${TEST_SERVICE}/hook_c`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client.createCell('test', 'a', '3').expect(HttpStatus.CREATED);
+      expect(httpServiceMock.post).toBeCalledTimes(2);
+      expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
+    });
+
+    it('should call hook only for cells updated', async () => {
+      await client.createCell('test', 'a', '2').expect(HttpStatus.CREATED);
+      await client.createCell('test', 'b', '=a+1').expect(HttpStatus.CREATED);
+      await client
+        .createCell('test', 'c', '=MIN(B+1, 1)')
+        .expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'b', {
+          webhook_url: `${TEST_SERVICE}/hook`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client
+        .subscribe('test', 'c', {
+          webhook_url: `${TEST_SERVICE}/hook_c`,
+        })
+        .expect(HttpStatus.CREATED);
+      await client.createCell('test', 'a', '3').expect(HttpStatus.CREATED);
+      expect(httpServiceMock.post).toBeCalledTimes(1);
+      expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
     });
   });
 });
