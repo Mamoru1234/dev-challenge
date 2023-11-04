@@ -70,6 +70,43 @@ exports[`SpreadSheetController (e2e) complex circular reference 2`] = `
 }
 `;
 
+exports[`SpreadSheetController (e2e) complex circular reference with different cases 1`] = `
+{
+  "error": "Unprocessable Entity",
+  "message": "Circular reference found",
+  "statusCode": 422,
+}
+`;
+
+exports[`SpreadSheetController (e2e) complex circular reference with different cases 2`] = `
+{
+  "apple": {
+    "result": "2",
+    "value": "2",
+  },
+  "banana": {
+    "result": "3",
+    "value": "=aPPle + 1",
+  },
+  "candle": {
+    "result": "5",
+    "value": "=SUM(BANANA, 2)",
+  },
+  "dummy": {
+    "result": "9",
+    "value": "=CANDLE + 4",
+  },
+  "eggplant": {
+    "result": "6",
+    "value": "=BANaNA + 3",
+  },
+  "f": {
+    "result": "20",
+    "value": "=dummy + 5 + EggPlanT",
+  },
+}
+`;
+
 exports[`SpreadSheetController (e2e) complicated case 1`] = `
 {
   "a": {
@@ -91,6 +128,19 @@ exports[`SpreadSheetController (e2e) complicated case 1`] = `
   "e": {
     "result": "11",
     "value": "=c + d",
+  },
+}
+`;
+
+exports[`SpreadSheetController (e2e) function names in cells 1`] = `
+{
+  "sum": {
+    "result": "2",
+    "value": "2",
+  },
+  "sumofsum": {
+    "result": "5",
+    "value": "=SUM(sum, 3)",
   },
 }
 `;

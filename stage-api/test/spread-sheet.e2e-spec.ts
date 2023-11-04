@@ -158,6 +158,36 @@ describe('SpreadSheetController (e2e)', () => {
     expect(sheetData).toMatchSnapshot();
   });
 
+  it('complex circular reference with different cases', async () => {
+    await createCells('test', [
+      ['apple', '2'],
+      ['baNanA', '=aPPle + 1'],
+      ['CANDLE', '=SUM(BANANA, 2)'],
+      ['Eggplant', '=BANaNA + 3'],
+      ['dummy', '=CANDLE + 4'],
+      ['f', '=dummy + 5 + EggPlanT'],
+    ]);
+    const { body } = await client
+      .createCell('test', 'CANDLe', '=baNanA + f')
+      .expect(HttpStatus.UNPROCESSABLE_ENTITY);
+    expect(body).toMatchSnapshot();
+    const { body: sheetData } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(sheetData).toMatchSnapshot();
+  });
+
+  it.only('function names in cells', async () => {
+    await createCells('test', [
+      ['SUM', '2'],
+      ['sumOfSum', '=SUM(sum, 3)'],
+    ]);
+    const { body: sheetData } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(sheetData).toMatchSnapshot();
+  });
+
   it('should update deps', async () => {
     await createCells('test', [
       ['a', '2'],

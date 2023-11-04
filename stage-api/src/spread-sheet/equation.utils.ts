@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { EquationNode, EquationNodePlus, parse } from 'equation-parser';
-import { uniq } from 'lodash';
+import { mean, uniq } from 'lodash';
 
 export interface ConstantNode {
   type: 'constant';
@@ -31,6 +31,8 @@ export type NodeVisitor<R> = (node: VisitNode<R>) => R;
 export const FUNCTIONS = {
   max: (args: number[]) => Math.max(...args),
   min: (args: number[]) => Math.min(...args),
+  sum: (args: number[]) => args.reduce((acc, it) => acc + it, 0),
+  avg: (args: number[]) => mean(args),
 };
 
 export const BINARY_OPERATORS = {
@@ -95,7 +97,8 @@ export function evalEquation(
       return +visit.value;
     }
     if (visit.type === 'constant' && visit.name === 'variable') {
-      const mapped = variables[visit.value];
+      const varName = visit.value.toLowerCase();
+      const mapped = variables[varName];
       if (mapped == null) {
         throw new BadRequestException(`Unknown variable ${visit.value}`);
       }
@@ -106,9 +109,10 @@ export function evalEquation(
       return operator(visit.a, visit.b);
     }
     if (visit.type === 'function') {
-      const mapped = FUNCTIONS[visit.name];
+      const funcName = visit.name.toLowerCase();
+      const mapped = FUNCTIONS[funcName];
       if (!mapped) {
-        throw new BadRequestException(`Unknown function ${visit.name}`);
+        throw new BadRequestException(`Unknown function ${funcName}`);
       }
       return mapped(visit.args);
     }
@@ -119,7 +123,8 @@ export function evalEquation(
 export function findVariables(equation: EquationNode): string[] {
   return traverseEquation(equation, (visit: VisitNode<string[]>) => {
     if (visit.type === 'constant' && visit.name === 'variable') {
-      return [visit.value];
+      const varName = visit.value.toLowerCase();
+      return [varName];
     }
     if (visit.type === 'binary-operator') {
       return uniq(visit.a.concat(visit.b));
