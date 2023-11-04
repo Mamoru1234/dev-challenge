@@ -259,4 +259,36 @@ describe('Core spreadsheet API', () => {
       .expect(HttpStatus.NOT_FOUND);
     expect(body).toMatchSnapshot();
   });
+
+  it('should handle update to string', async () => {
+    await createCells('test', [
+      ['a', '2'],
+      ['b', '3'],
+      ['c', '=a+b'],
+    ]);
+    const { body: beforeUpdate } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(beforeUpdate).toMatchSnapshot();
+    await client
+      .createCell('test', 'a', 'number of persons: ')
+      .expect(HttpStatus.CREATED);
+    const { body: afterUpdate } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(afterUpdate).toMatchSnapshot();
+  });
+
+  it('should drop links after update', async () => {
+    await createCells('test', [
+      ['a', '2'],
+      ['b', '3'],
+      ['c', '=a+b'],
+    ]);
+    const linksCountBefore = await cellLinkRepository.count();
+    expect(linksCountBefore).toBe(2);
+    await client.createCell('test', 'c', '3').expect(HttpStatus.CREATED);
+    const linksCountAfter = await cellLinkRepository.count();
+    expect(linksCountAfter).toBe(0);
+  });
 });

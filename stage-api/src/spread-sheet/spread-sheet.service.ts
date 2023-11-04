@@ -127,10 +127,12 @@ export class SpreadSheetService {
           calculationOutput.varIds,
         );
       }
-      // TODO cell update links for cells with no calculations
-      // TODO cell update to non number
+      if (existingCell && !calculationOutput) {
+        await cellLinkRepository.delete({
+          toCellId: existingCell.id,
+        });
+      }
       if (existingCell) {
-        // TODO check update with same result
         const updatedCells = await this.equationRecalculateService.recalculate({
           id: cell.id,
           context,
