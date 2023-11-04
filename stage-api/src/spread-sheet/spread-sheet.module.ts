@@ -4,9 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
 import { SpreadSheetService } from './spread-sheet.service';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
+import { CellWebhookModule } from '../cell-webhook/cell-webhook.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CellEntity, CellLinkEntity])],
+  imports: [
+    TypeOrmModule.forFeature([CellEntity, CellLinkEntity]),
+    CellWebhookModule,
+  ],
   controllers: [SpreadSheetController],
   providers: [SpreadSheetService],
 })

@@ -53,7 +53,7 @@ export class SpreadSheetService {
     const cell = await this.cellRepository.findOne({
       where: {
         sheetId,
-        cellId: cellId.toLowerCase(),
+        cellId: cellId,
       },
       select: ['value', 'result'],
     });
@@ -67,8 +67,7 @@ export class SpreadSheetService {
   }
 
   postCell(input: CreateCellInput): Promise<CellData> {
-    const { cellId: rawCellId, sheetId, value } = input;
-    const cellId = rawCellId.toLowerCase();
+    const { cellId, sheetId, value } = input;
     return this.dataSource.transaction(async (tx) => {
       const cellRepository = tx.getRepository(CellEntity);
       const cellLinkRepository = tx.getRepository(CellLinkEntity);

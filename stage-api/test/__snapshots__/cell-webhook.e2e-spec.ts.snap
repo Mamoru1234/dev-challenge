@@ -1,0 +1,51 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe invalid request no webhook url 1`] = `
+{
+  "error": "Bad Request",
+  "message": [
+    "webhookUrl must be shorter than or equal to 1024 characters",
+    "webhookUrl must be a URL address",
+    "webhookUrl must be a string",
+  ],
+  "statusCode": 400,
+}
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe invalid request url without https 1`] = `
+{
+  "error": "Bad Request",
+  "message": [
+    "webhookUrl must be a URL address",
+  ],
+  "statusCode": 400,
+}
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe invalid request url without protocol 1`] = `
+{
+  "error": "Bad Request",
+  "message": [
+    "webhookUrl must be a URL address",
+  ],
+  "statusCode": 400,
+}
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe invalid request webhook is invalid url 1`] = `
+{
+  "error": "Bad Request",
+  "message": [
+    "webhookUrl must be a URL address",
+  ],
+  "statusCode": 400,
+}
+`;
+
+exports[`Cell webhooks POST /:sheet_id/:cell_id/subscribe should create subscription 1`] = `
+[
+  {
+    "url": "https://www.google.com",
+  },
+]
+`;

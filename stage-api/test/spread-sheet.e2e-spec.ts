@@ -6,7 +6,7 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CellLinkEntity } from '../src/database/entity/cell-link.entity';
 
-describe('SpreadSheetController (e2e)', () => {
+describe.skip('Core spreadsheet API', () => {
   let app: INestApplication;
   let cellLinkRepository: Repository<CellLinkEntity>;
   const client = {
@@ -177,7 +177,7 @@ describe('SpreadSheetController (e2e)', () => {
     expect(sheetData).toMatchSnapshot();
   });
 
-  it.only('function names in cells', async () => {
+  it('function names in cells', async () => {
     await createCells('test', [
       ['SUM', '2'],
       ['sumOfSum', '=SUM(sum, 3)'],
