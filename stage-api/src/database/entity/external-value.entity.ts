@@ -14,7 +14,9 @@ export class ExternalValueEntity {
   id: number;
 
   @Column('text')
-  @Index()
+  @Index({
+    unique: true,
+  })
   url: string;
 
   @Column('text')

@@ -5,11 +5,10 @@ import { CellEntity } from '../database/entity/cell.entity';
 import { SpreadSheetService } from './spread-sheet.service';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
 import { CellWebhookModule } from '../cell-webhook/cell-webhook.module';
-import { ExternalArgsFetcher } from './evaluation/external-args.fetcher';
 import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
 import { EquationRecalculateService } from './equation-recalculation.service';
 import { HttpModule } from '@nestjs/axios';
-import { EquationExternalsProcessing } from './equation-externals-processing.service';
+import { EquationPreProcessingService } from './evaluation/equation-pre-processing.service';
 
 @Module({
   imports: [
@@ -20,10 +19,9 @@ import { EquationExternalsProcessing } from './equation-externals-processing.ser
   controllers: [SpreadSheetController],
   providers: [
     SpreadSheetService,
-    ExternalArgsFetcher,
     EvaluationContextFactory,
     EquationRecalculateService,
-    EquationExternalsProcessing,
+    EquationPreProcessingService,
   ],
 })
 export class SpreadSheetModule {}

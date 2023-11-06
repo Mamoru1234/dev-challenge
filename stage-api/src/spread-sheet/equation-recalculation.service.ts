@@ -96,7 +96,7 @@ export class EquationRecalculateService {
         where: {
           id: In(stage),
         },
-        select: ['id', 'cellId', 'equation', 'result', 'value'],
+        select: ['id', 'cellId', 'equation', 'result', 'value', 'defaultVars'],
       });
       const cellsUpdateInStage = [];
       for (const cell of stageCells) {
@@ -106,7 +106,11 @@ export class EquationRecalculateService {
             `Found cell in upsteam deps without equation ${cell.cellId}`,
           );
         }
-        const newResult = await evalEquation(equation, vars, context);
+        const newResult = await evalEquation(
+          equation,
+          Object.assign({}, vars, cell.defaultVars),
+          context,
+        );
         context.variablesService.setValue(cell.id, {
           cellId: cell.cellId,
           value: newResult,

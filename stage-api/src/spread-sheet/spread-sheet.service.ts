@@ -1,29 +1,38 @@
 import {
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Not, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Not, Repository } from 'typeorm';
 import { CellEntity } from '../database/entity/cell.entity';
 import {
   CellData,
   CreateCellInput,
   GetSheetOutput,
 } from './spread-sheet.interface';
-import { evalEquation, findVariables, parseEquation } from './equation.utils';
+import {
+  evalEquation,
+  findExternalRefs,
+  findVariables,
+  parseEquation,
+} from './equation.utils';
 import { EquationNode } from 'equation-parser';
 import { CellLinkEntity } from '../database/entity/cell-link.entity';
 import { EquationRecalculateService } from './equation-recalculation.service';
 import { CellWebhookProcessingService } from '../cell-webhook/cell-webhook-processing.service';
 import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
 import { EvaluationContext } from './evaluation/evaluation-context';
-import { EquationValue, valueToString } from './equation-value';
-import { EquationExternalsProcessing } from './equation-externals-processing.service';
+import { EquationValue, isStringValue, valueToString } from './equation-value';
+import { EquationPreProcessingService } from './evaluation/equation-pre-processing.service';
+import { ExternalValueEntity } from '../database/entity/external-value.entity';
+import { uniq } from 'lodash';
 
 export interface CalculateEquationOutput {
   varIds: string[];
   result: EquationValue;
+  vars: Record<string, EquationValue>;
 }
 
 @Injectable()
@@ -35,7 +44,7 @@ export class SpreadSheetService {
     private readonly cellWebhookProcessingService: CellWebhookProcessingService,
     private readonly evaluationContextFactory: EvaluationContextFactory,
     private readonly equationRecalculateService: EquationRecalculateService,
-    private readonly equationExternalsProcessing: EquationExternalsProcessing,
+    private readonly equationPreProcessingService: EquationPreProcessingService,
   ) {}
 
   async getSheet(sheetId: string): Promise<GetSheetOutput> {
@@ -86,15 +95,12 @@ export class SpreadSheetService {
         },
         select: ['id', 'result', 'value'],
       });
-      const { value: equationValue, externals } =
-        await this.equationExternalsProcessing.findAndReplaceExternals(
-          tx,
-          value,
-        );
-      const equation = parseEquation(equationValue);
       const context = this.evaluationContextFactory.createContext(tx);
+      const { value: equationValue, defaultVars } =
+        await this.equationPreProcessingService.process(value);
+      const equation = parseEquation(equationValue);
       const calculationOutput = equation
-        ? await this.calculateEquation(sheetId, equation, context)
+        ? await this.calculateEquation(sheetId, equation, context, defaultVars)
         : undefined;
       const result = calculationOutput
         ? valueToString(calculationOutput.result)
@@ -110,6 +116,9 @@ export class SpreadSheetService {
           value,
         };
       }
+      const externals = calculationOutput
+        ? await this.findExternals(equation, calculationOutput.vars, tx)
+        : [];
       const cell = await cellRepository.save({
         id: existingCell?.id,
         sheetId,
@@ -117,6 +126,7 @@ export class SpreadSheetService {
         value,
         result,
         equation,
+        defaultVars,
         externals,
       });
       if (calculationOutput) {
@@ -161,15 +171,50 @@ export class SpreadSheetService {
     sheetId: string,
     equation: EquationNode,
     context: EvaluationContext,
+    defaultVars: Record<string, EquationValue>,
   ): Promise<CalculateEquationOutput> {
     const variableNames = findVariables(equation);
     const varIds = await this.mapVarNamesToIds(sheetId, variableNames);
     const varValues = await context.variablesService.populateVariables(varIds);
-    const result = await evalEquation(equation, varValues, context);
+    const vars = Object.assign({}, varValues, defaultVars);
+    const result = await evalEquation(equation, vars, context);
     return {
       result,
       varIds,
+      vars,
     };
+  }
+
+  private async findExternals(
+    equation: EquationNode,
+    vars: Record<string, EquationValue>,
+    tx: EntityManager,
+  ): Promise<ExternalValueEntity[]> {
+    const externalVars = findExternalRefs(equation);
+    if (!externalVars.length) {
+      return [];
+    }
+    const externalsRepository = tx.getRepository(ExternalValueEntity);
+    const urls = uniq(
+      externalVars.map((it) => {
+        const varValue = vars[it];
+        if (!isStringValue(varValue)) {
+          throw new UnprocessableEntityException('Unknown var value recieved');
+        }
+        return varValue.value;
+      }),
+    );
+    const externals = await externalsRepository.find({
+      where: {
+        url: In(urls),
+      },
+    });
+    if (externals.length !== urls.length) {
+      throw new InternalServerErrorException(
+        'inconsistent external values state',
+      );
+    }
+    return externals;
   }
 
   private async saveEquationLinks(

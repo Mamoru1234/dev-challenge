@@ -1,8 +1,80 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`External ref function API test calculation with external 1`] = `
+{
+  "result": "55",
+  "value": "=EXTERNAL_REF(https://test.api.com)+32",
+}
+`;
+
+exports[`External ref function API test external url as var with calculation var combined 1`] = `
+{
+  "result": "https://test.api.com",
+  "value": "https://test.api.com",
+}
+`;
+
+exports[`External ref function API test external url as var with calculation var combined 2`] = `
+{
+  "result": "32",
+  "value": "32",
+}
+`;
+
+exports[`External ref function API test external url as var with calculation var combined 3`] = `
+{
+  "result": "55",
+  "value": "=EXTERNAL_REF(cell1)+cell2",
+}
+`;
+
+exports[`External ref function API test invalid url 1`] = `
+{
+  "error": "Bad Request",
+  "message": "Cannot parse equation error on [18: 18]",
+  "statusCode": 400,
+}
+`;
+
+exports[`External ref function API test several cells same URL 1`] = `
+{
+  "result": "Hello world from API",
+  "value": "=EXTERNAL_REF(https://test.api.com)",
+}
+`;
+
+exports[`External ref function API test several cells same URL 2`] = `
+{
+  "result": "Hello world from API",
+  "value": "=EXTERNAL_REF(https://test.api.com)",
+}
+`;
+
+exports[`External ref function API test should fail if external ref var got updated to invalid url 1`] = `
+{
+  "result": "https://test.api.com",
+  "value": "https://test.api.com",
+}
+`;
+
+exports[`External ref function API test should fail if external ref var got updated to invalid url 2`] = `
+{
+  "result": "55",
+  "value": "=EXTERNAL_REF(cell1)+32",
+}
+`;
+
+exports[`External ref function API test should fail if external ref var got updated to invalid url 3`] = `
+{
+  "error": "Unprocessable Entity",
+  "message": "[external_ref] Received invalid URL some_invalid_url",
+  "statusCode": 422,
+}
+`;
+
 exports[`External ref function API test simple case 1`] = `
 {
   "result": "Hello world from API",
-  "value": "=EXTERNAL_REF(url)",
+  "value": "=EXTERNAL_REF(https://test.api.com)",
 }
 `;

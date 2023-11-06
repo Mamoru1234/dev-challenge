@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ExternalValueEntity } from './external-value.entity';
+import { EquationValue } from '../../spread-sheet/equation-value';
 
 @Entity('cell')
 @Index(['cellId', 'sheetId'])
@@ -32,6 +33,12 @@ export class CellEntity {
     nullable: true,
   })
   equation?: EquationNode;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  defaultVars?: Record<string, EquationValue>;
 
   @ManyToMany(() => ExternalValueEntity, (value) => value.cells)
   externals: ExternalValueEntity[];

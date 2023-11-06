@@ -4,7 +4,7 @@ import { AppModule } from '../src/app.module';
 import { enableValidation } from '../src/app.utils';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import * as request from 'supertest';
+import request from 'supertest';
 import { CellValueWebhookEntity } from '../src/database/entity/cell-value-webhook';
 import { pick } from 'lodash';
 import { HttpService } from '@nestjs/axios';
@@ -120,7 +120,7 @@ describe('Cell webhooks', () => {
       await client
         .createCell('test', 'test', 'aTestValue')
         .expect(HttpStatus.CREATED);
-      expect(httpServiceMock.post).not.toBeCalled();
+      expect(httpServiceMock.post).not.toHaveBeenCalled();
     });
 
     it('should call hook when value update', async () => {
@@ -135,7 +135,7 @@ describe('Cell webhooks', () => {
       await client
         .createCell('test', 'test', 'newValue')
         .expect(HttpStatus.CREATED);
-      expect(httpServiceMock.post).toBeCalled();
+      expect(httpServiceMock.post).toHaveBeenCalled();
       expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
     });
 
@@ -154,7 +154,7 @@ describe('Cell webhooks', () => {
         })
         .expect(HttpStatus.CREATED);
       await client.createCell('test', 'a', '3').expect(HttpStatus.CREATED);
-      expect(httpServiceMock.post).toBeCalledTimes(2);
+      expect(httpServiceMock.post).toHaveBeenCalledTimes(2);
       expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
     });
 
@@ -175,7 +175,7 @@ describe('Cell webhooks', () => {
         })
         .expect(HttpStatus.CREATED);
       await client.createCell('test', 'a', '3').expect(HttpStatus.CREATED);
-      expect(httpServiceMock.post).toBeCalledTimes(1);
+      expect(httpServiceMock.post).toHaveBeenCalledTimes(1);
       expect(httpServiceMock.post.mock.calls).toMatchSnapshot();
     });
   });

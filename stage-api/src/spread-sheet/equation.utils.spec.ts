@@ -1,5 +1,10 @@
 import { EquationNode, parse } from 'equation-parser';
-import { evalEquation, findVariables, parseEquation } from './equation.utils';
+import {
+  evalEquation,
+  findExternalRefs,
+  findVariables,
+  parseEquation,
+} from './equation.utils';
 import { BadRequestException } from '@nestjs/common';
 import { EvaluationContext } from './evaluation/evaluation-context';
 import { createNumberValue, parseValue } from './equation-value';
@@ -70,6 +75,36 @@ describe('equation utils', () => {
       ['1 + var', ['var']],
       ['1 + var1 / ter + 234', ['var1', 'ter']],
       ['1 + Var1 / tEr + 234', ['var1', 'ter']],
+    ]);
+  });
+
+  describe('find external refs', () => {
+    function generateCases(cases: [string, string[]][]) {
+      for (const current of cases) {
+        it(`${current[0]} should find ${JSON.stringify(current[1])}`, () => {
+          expect(findExternalRefs(parse(current[0]) as EquationNode)).toEqual(
+            current[1],
+          );
+        });
+      }
+    }
+
+    generateCases([
+      ['1 + 1', []],
+      ['1 + var', []],
+      ['SUM(external_ref(systemUrl))', ['systemUrl']],
+      [
+        'SUM(external_ref(systemUrl)) + MIN(external_ref(systemUrl))',
+        ['systemUrl'],
+      ],
+      [
+        'SUM(external_ref(systemUrl)) + MIN(external_ref(systemUrl2))',
+        ['systemUrl', 'systemUrl2'],
+      ],
+      [
+        'SUM(external_ref(myVar1)) + MIN(external_ref(myVar2))',
+        ['myvar1', 'myvar2'],
+      ],
     ]);
   });
 

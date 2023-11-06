@@ -1,4 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { EquationNode, EquationNodePlus, parse } from 'equation-parser';
 import { mean, uniq } from 'lodash';
 import { EvaluationContext } from './evaluation/evaluation-context';
@@ -11,6 +14,7 @@ import {
   isStringValue,
   parseValue,
 } from './equation-value';
+import { LINK_VAR_PREFIX } from './evaluation/evaluation.constants';
 
 export interface ConstantNode {
   type: 'constant';
@@ -29,6 +33,7 @@ export interface FunctionNode<R> {
   type: 'function';
   name: string;
   args: R[];
+  argNodes: EquationNode[];
 }
 
 export type VisitNode<R> =
@@ -52,17 +57,24 @@ export const FUNCTIONS = {
     context: EvaluationContext,
   ): Promise<EquationValue> => {
     if (args.length !== 1) {
-      throw new BadRequestException('[external_ref] Wrong number of args');
+      throw new UnprocessableEntityException(
+        '[external_ref] Wrong number of args',
+      );
     }
     const [url] = args;
     if (!isStringValue(url)) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         '[external_ref] Unsupported value received',
       );
     }
-    if (!isURL(url.value, { protocols: ['https'], require_protocol: true })) {
-      throw new BadRequestException(
-        `[external_ref] Received invalid URL ${url}`,
+    if (
+      !isURL(url.value, {
+        protocols: ['https', 'http'],
+        require_protocol: true,
+      })
+    ) {
+      throw new UnprocessableEntityException(
+        `[external_ref] Received invalid URL ${url.value}`,
       );
     }
     const externalValue = await context.externalArgsFetcher.fetch(url.value);
@@ -87,7 +99,7 @@ export const BINARY_OPERATORS = {
   'divide-fraction': (_a: EquationValue, _b: EquationValue): EquationValue => {
     const [a, b] = convertToNumbers([_a, _b]);
     if (b === 0) {
-      throw new BadRequestException('Zero division');
+      throw new UnprocessableEntityException('Zero division');
     }
     return createNumberValue(a / b);
   },
@@ -141,9 +153,10 @@ export function traverseEquation<R>(
       type: 'function',
       args,
       name: equation.name,
+      argNodes: equation.args,
     });
   }
-  throw new BadRequestException(`Unknown node type ${equation.type}`);
+  throw new UnprocessableEntityException(`Unknown node type ${equation.type}`);
 }
 
 export function evalEquation(
@@ -158,10 +171,14 @@ export function evalEquation(
         return Promise.resolve(createNumberValue(+visit.value));
       }
       if (visit.type === 'constant' && visit.name === 'variable') {
-        const varName = visit.value.toLowerCase();
+        const varName = visit.value.startsWith(LINK_VAR_PREFIX)
+          ? visit.value
+          : visit.value.toLowerCase();
         const mapped = variables[varName];
         if (mapped == null) {
-          throw new BadRequestException(`Unknown variable ${visit.value}`);
+          throw new UnprocessableEntityException(
+            `Unknown variable ${visit.value}`,
+          );
         }
         return Promise.resolve(mapped);
       }
@@ -173,11 +190,13 @@ export function evalEquation(
         const funcName = visit.name.toLowerCase();
         const mapped = FUNCTIONS[funcName];
         if (!mapped) {
-          throw new BadRequestException(`Unknown function ${funcName}`);
+          throw new UnprocessableEntityException(
+            `Unknown function ${funcName}`,
+          );
         }
         return Promise.all(visit.args).then((args) => mapped(args, context));
       }
-      throw new BadRequestException(`Unknown node ${visit.type}`);
+      throw new UnprocessableEntityException(`Unknown node ${visit.type}`);
     },
   );
 }
@@ -185,6 +204,9 @@ export function evalEquation(
 export function findVariables(equation: EquationNode): string[] {
   return traverseEquation(equation, (visit: VisitNode<string[]>) => {
     if (visit.type === 'constant' && visit.name === 'variable') {
+      if (visit.value.startsWith(LINK_VAR_PREFIX)) {
+        return [];
+      }
       const varName = visit.value.toLowerCase();
       return [varName];
     }
@@ -196,6 +218,34 @@ export function findVariables(equation: EquationNode): string[] {
         (prev, it) => uniq(prev.concat(it)),
         [] as string[],
       );
+    }
+    return [];
+  });
+}
+
+export function findExternalRefs(equation: EquationNode): string[] {
+  return traverseEquation(equation, (visit: VisitNode<string[]>): string[] => {
+    if (visit.type === 'function') {
+      const funcName = visit.name.toLowerCase();
+      if (funcName !== 'external_ref') {
+        return visit.args.reduce(
+          (prev, it) => uniq(prev.concat(it)),
+          [] as string[],
+        );
+      }
+      const [url] = visit.argNodes;
+      if (url.type !== 'variable') {
+        throw new UnprocessableEntityException(
+          'Equation URLs is not supported yet',
+        );
+      }
+      const varName = url.name.startsWith(LINK_VAR_PREFIX)
+        ? url.name
+        : url.name.toLowerCase();
+      return [varName];
+    }
+    if (visit.type === 'binary-operator') {
+      return uniq(visit.a.concat(visit.b));
     }
     return [];
   });
