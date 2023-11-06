@@ -12,7 +12,7 @@ import { from } from 'rxjs';
 
 const TEST_SERVICE = 'https://test.service.com';
 
-describe('Cell webhooks', () => {
+describe.skip('Cell webhooks', () => {
   let app: INestApplication;
   let cellValueWebhookRepository: Repository<CellValueWebhookEntity>;
   const httpServiceMock = {

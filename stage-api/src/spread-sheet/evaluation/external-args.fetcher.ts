@@ -63,7 +63,7 @@ export class ExternalArgsFetcher {
       this.httpService.post(
         `${url}/subscribe`,
         {
-          webhook_url: `${process.env.SERVER_BASE}/subscriptions/${id}`,
+          webhook_url: `${process.env.SERVER_BASE}/webhook/subscriptions/${id}`,
         },
         {
           maxContentLength: 1024,

@@ -17,6 +17,11 @@ describe('External ref function API test', () => {
 
   const mockResponse = (data: any) => from(Promise.resolve({ data }));
 
+  const getSubscriptionURL = (call: number) => {
+    const { webhook_url } = httpServiceMock.post.mock.calls[call][1];
+    return webhook_url.replace(process.env.SERVER_BASE, '');
+  };
+
   const client = {
     getSheet: (sheetId: string) =>
       request(app.getHttpServer()).get(`/${sheetId}`),
@@ -26,6 +31,8 @@ describe('External ref function API test', () => {
       request(app.getHttpServer())
         .post(`/${sheetId}/${cellId}`)
         .send({ value }),
+    notify: (url: string, result: string) =>
+      request(app.getHttpServer()).post(url).send({ result }),
   };
 
   beforeEach(async () => {
@@ -146,5 +153,58 @@ describe('External ref function API test', () => {
       .createCell('test', 'cell1', 'some_invalid_url')
       .expect(HttpStatus.UNPROCESSABLE_ENTITY);
     expect(errorBody).toMatchSnapshot();
+  });
+
+  it('simple update case', async () => {
+    httpServiceMock.get.mockReturnValue(
+      mockResponse({
+        result: '23',
+      }),
+    );
+    httpServiceMock.post.mockReturnValue(mockResponse({}));
+    const { body: cell1 } = await client
+      .createCell('test', 'cell1', '=EXTERNAL_REF(https://test.api.com)+32')
+      .expect(HttpStatus.CREATED);
+    expect(cell1).toMatchSnapshot();
+    const subscriptionUrl = getSubscriptionURL(0);
+    expect(subscriptionUrl).toBeTruthy();
+    await client.notify(subscriptionUrl, '45').expect(HttpStatus.CREATED);
+    const { body: updatedCell } = await client
+      .getCell('test', 'cell1')
+      .expect(HttpStatus.OK);
+    expect(updatedCell).toMatchSnapshot();
+  });
+
+  it('more complicated case', async () => {
+    httpServiceMock.get.mockReturnValue(
+      mockResponse({
+        result: '2',
+      }),
+    );
+    httpServiceMock.post.mockReturnValue(mockResponse({}));
+    const { body: cell1 } = await client
+      .createCell('test', 'cell1', '=EXTERNAL_REF(https://test.api.com)+1')
+      .expect(HttpStatus.CREATED);
+    expect(cell1).toMatchSnapshot();
+    const { body: cell2 } = await client
+      .createCell('test', 'cell2', '=cell1+2')
+      .expect(HttpStatus.CREATED);
+    expect(cell2).toMatchSnapshot();
+    const { body: cell3 } = await client
+      .createCell('test', 'cell3', '=EXTERNAL_REF(https://test.api.com)+cell2')
+      .expect(HttpStatus.CREATED);
+    expect(cell3).toMatchSnapshot();
+    const subscriptionUrl = getSubscriptionURL(0);
+    expect(subscriptionUrl).toBeTruthy();
+    await client.notify(subscriptionUrl, '4').expect(HttpStatus.CREATED);
+    const { body: sheetData } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(sheetData).toMatchSnapshot();
+    await client.notify(subscriptionUrl, '8').expect(HttpStatus.CREATED);
+    const { body: sheetData1 } = await client
+      .getSheet('test')
+      .expect(HttpStatus.OK);
+    expect(sheetData1).toMatchSnapshot();
   });
 });

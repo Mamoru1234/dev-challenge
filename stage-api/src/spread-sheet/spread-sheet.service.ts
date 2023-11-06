@@ -100,7 +100,13 @@ export class SpreadSheetService {
         await this.equationPreProcessingService.process(value);
       const equation = parseEquation(equationValue);
       const calculationOutput = equation
-        ? await this.calculateEquation(sheetId, equation, context, defaultVars)
+        ? await this.calculateEquation(
+            sheetId,
+            equation,
+            context,
+            defaultVars,
+            cellRepository,
+          )
         : undefined;
       const result = calculationOutput
         ? valueToString(calculationOutput.result)
@@ -167,14 +173,19 @@ export class SpreadSheetService {
     });
   }
 
-  private async calculateEquation(
+  async calculateEquation(
     sheetId: string,
     equation: EquationNode,
     context: EvaluationContext,
     defaultVars: Record<string, EquationValue>,
+    cellRepository: Repository<CellEntity>,
   ): Promise<CalculateEquationOutput> {
     const variableNames = findVariables(equation);
-    const varIds = await this.mapVarNamesToIds(sheetId, variableNames);
+    const varIds = await this.mapVarNamesToIds(
+      sheetId,
+      variableNames,
+      cellRepository,
+    );
     const varValues = await context.variablesService.populateVariables(varIds);
     const vars = Object.assign({}, varValues, defaultVars);
     const result = await evalEquation(equation, vars, context);
@@ -236,8 +247,9 @@ export class SpreadSheetService {
   private async mapVarNamesToIds(
     sheetId: string,
     vars: string[],
+    cellRepository: Repository<CellEntity>,
   ): Promise<string[]> {
-    const varsInDb = await this.cellRepository.find({
+    const varsInDb = await cellRepository.find({
       where: {
         sheetId,
         cellId: In(vars),

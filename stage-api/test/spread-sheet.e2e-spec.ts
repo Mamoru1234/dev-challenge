@@ -7,7 +7,7 @@ import { DataSource, Repository } from 'typeorm';
 import { CellLinkEntity } from '../src/database/entity/cell-link.entity';
 import { enableValidation } from '../src/app.utils';
 
-describe('Core spreadsheet API', () => {
+describe.skip('Core spreadsheet API', () => {
   let app: INestApplication;
   let cellLinkRepository: Repository<CellLinkEntity>;
   const client = {

@@ -36,6 +36,61 @@ exports[`External ref function API test invalid url 1`] = `
 }
 `;
 
+exports[`External ref function API test more complicated case 1`] = `
+{
+  "result": "3",
+  "value": "=EXTERNAL_REF(https://test.api.com)+1",
+}
+`;
+
+exports[`External ref function API test more complicated case 2`] = `
+{
+  "result": "5",
+  "value": "=cell1+2",
+}
+`;
+
+exports[`External ref function API test more complicated case 3`] = `
+{
+  "result": "7",
+  "value": "=EXTERNAL_REF(https://test.api.com)+cell2",
+}
+`;
+
+exports[`External ref function API test more complicated case 4`] = `
+{
+  "cell1": {
+    "result": "5",
+    "value": "=EXTERNAL_REF(https://test.api.com)+1",
+  },
+  "cell2": {
+    "result": "7",
+    "value": "=cell1+2",
+  },
+  "cell3": {
+    "result": "11",
+    "value": "=EXTERNAL_REF(https://test.api.com)+cell2",
+  },
+}
+`;
+
+exports[`External ref function API test more complicated case 5`] = `
+{
+  "cell1": {
+    "result": "9",
+    "value": "=EXTERNAL_REF(https://test.api.com)+1",
+  },
+  "cell2": {
+    "result": "11",
+    "value": "=cell1+2",
+  },
+  "cell3": {
+    "result": "19",
+    "value": "=EXTERNAL_REF(https://test.api.com)+cell2",
+  },
+}
+`;
+
 exports[`External ref function API test several cells same URL 1`] = `
 {
   "result": "Hello world from API",
@@ -76,5 +131,19 @@ exports[`External ref function API test simple case 1`] = `
 {
   "result": "Hello world from API",
   "value": "=EXTERNAL_REF(https://test.api.com)",
+}
+`;
+
+exports[`External ref function API test simple update case 1`] = `
+{
+  "result": "55",
+  "value": "=EXTERNAL_REF(https://test.api.com)+32",
+}
+`;
+
+exports[`External ref function API test simple update case 2`] = `
+{
+  "result": "77",
+  "value": "=EXTERNAL_REF(https://test.api.com)+32",
 }
 `;

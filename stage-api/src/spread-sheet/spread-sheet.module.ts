@@ -9,10 +9,12 @@ import { EvaluationContextFactory } from './evaluation/evaluation-context.factor
 import { EquationRecalculateService } from './equation-recalculation.service';
 import { HttpModule } from '@nestjs/axios';
 import { EquationPreProcessingService } from './evaluation/equation-pre-processing.service';
+import { ExternalValueEntity } from '../database/entity/external-value.entity';
+import { ExternalValueUpdateService } from './external-value-update.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CellEntity, CellLinkEntity]),
+    TypeOrmModule.forFeature([CellEntity, CellLinkEntity, ExternalValueEntity]),
     CellWebhookModule,
     HttpModule,
   ],
@@ -21,6 +23,7 @@ import { EquationPreProcessingService } from './evaluation/equation-pre-processi
     SpreadSheetService,
     EvaluationContextFactory,
     EquationRecalculateService,
+    ExternalValueUpdateService,
     EquationPreProcessingService,
   ],
 })
