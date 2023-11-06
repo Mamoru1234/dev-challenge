@@ -1,5 +1,12 @@
 import { EquationNode } from 'equation-parser';
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { ExternalValueEntity } from './external-value.entity';
 
 @Entity('cell')
 @Index(['cellId', 'sheetId'])
@@ -25,4 +32,7 @@ export class CellEntity {
     nullable: true,
   })
   equation?: EquationNode;
+
+  @ManyToMany(() => ExternalValueEntity, (value) => value.cells)
+  externals: ExternalValueEntity[];
 }

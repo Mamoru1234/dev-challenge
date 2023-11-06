@@ -21,7 +21,7 @@ export class CellWebhookProcessingService {
       },
       select: ['id', 'url', 'cellId'],
     });
-    // TODO batching or rabbit
+    // TODO batching or rabbit(postponed since requirements clarification delay)
     await Promise.all(
       hooks.map((hook) => {
         const cell = cells.find((cell) => cell.id == hook.cellId);

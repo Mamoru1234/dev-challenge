@@ -5,5 +5,5 @@
 * start docker services `docker-compose up -d`
 * run tests `docker exec -it stage_api sh -c "npm run test && npm run test:e2e"`
 
-### Equation engine nodes
-For now this service allows to build equation only using numbers. Indeed equation engine can be enhanced to support operations based on strings, bool, etc.
+### Equation engine problem
+For now external_ref is supported in specific way, due to limitation of AST parser.

@@ -19,6 +19,7 @@ import { CellWebhookProcessingService } from '../cell-webhook/cell-webhook-proce
 import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
 import { EvaluationContext } from './evaluation/evaluation-context';
 import { EquationValue, valueToString } from './equation-value';
+import { EquationExternalsProcessing } from './equation-externals-processing.service';
 
 export interface CalculateEquationOutput {
   varIds: string[];
@@ -34,6 +35,7 @@ export class SpreadSheetService {
     private readonly cellWebhookProcessingService: CellWebhookProcessingService,
     private readonly evaluationContextFactory: EvaluationContextFactory,
     private readonly equationRecalculateService: EquationRecalculateService,
+    private readonly equationExternalsProcessing: EquationExternalsProcessing,
   ) {}
 
   async getSheet(sheetId: string): Promise<GetSheetOutput> {
@@ -84,7 +86,12 @@ export class SpreadSheetService {
         },
         select: ['id', 'result', 'value'],
       });
-      const equation = parseEquation(value);
+      const { value: equationValue, externals } =
+        await this.equationExternalsProcessing.findAndReplaceExternals(
+          tx,
+          value,
+        );
+      const equation = parseEquation(equationValue);
       const context = this.evaluationContextFactory.createContext(tx);
       const calculationOutput = equation
         ? await this.calculateEquation(sheetId, equation, context)
@@ -110,6 +117,7 @@ export class SpreadSheetService {
         value,
         result,
         equation,
+        externals,
       });
       if (calculationOutput) {
         if (calculationOutput.varIds.includes(cell.id)) {

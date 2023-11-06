@@ -9,6 +9,7 @@ import { ExternalArgsFetcher } from './evaluation/external-args.fetcher';
 import { EvaluationContextFactory } from './evaluation/evaluation-context.factory';
 import { EquationRecalculateService } from './equation-recalculation.service';
 import { HttpModule } from '@nestjs/axios';
+import { EquationExternalsProcessing } from './equation-externals-processing.service';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { HttpModule } from '@nestjs/axios';
     ExternalArgsFetcher,
     EvaluationContextFactory,
     EquationRecalculateService,
+    EquationExternalsProcessing,
   ],
 })
 export class SpreadSheetModule {}
